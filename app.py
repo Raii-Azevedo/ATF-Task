@@ -165,7 +165,7 @@ st.markdown("""
 
 # Sidebar de navegação
 with st.sidebar:
-    st.image("https://via.placeholder.com/200x80/0A2647/FFFFFF?text=TaskSync", use_column_width=True)
+    st.image("logo.png", use_column_width=True)
     menu = st.radio(
         "Navegação",
         ["📊 Dashboard", "📋 Kanban", "📅 Eventos", "📚 Knowledge Base", "🏢 Empresas Target", "👥 Senior Advisors"]
@@ -400,7 +400,7 @@ if menu == "📊 Dashboard":
         # Botão rápido para ir para eventos
         if st.button("➕ Adicionar Evento Agora"):
             st.switch_page("app.py?menu=📅 Eventos")  # Isso vai mudar para a página de eventos
-            
+
 # ================================
 # KANBAN
 # ================================
