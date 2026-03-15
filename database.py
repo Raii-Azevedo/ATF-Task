@@ -297,7 +297,7 @@ def init_db():
             """, init)
 
     conn.commit()
-    conn.close()
+    return_connection(conn)
     print("✅ Banco de dados inicializado com sucesso!")
 
 def migrate_database():
