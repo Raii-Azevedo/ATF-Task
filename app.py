@@ -2,6 +2,7 @@ import streamlit as st
 from database import get_connection, init_db
 import pandas as pd
 from datetime import datetime, date
+import time
 
 # Configuração da página
 st.set_page_config(
@@ -11,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS customizado para garantir legibilidade
+# CSS customizado (mantido igual, mas adicionei algumas classes novas)
 st.markdown("""
 <style>
     /* Cores seguras para texto */
@@ -29,7 +30,7 @@ st.markdown("""
         padding: 1rem;
         margin: 0.5rem 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        color: #1E1E1E;  /* texto escuro */
+        color: #1E1E1E;
     }
     .card h4, .card p {
         color: #1E1E1E;
@@ -87,6 +88,36 @@ st.markdown("""
         font-size: 0.9rem;
         text-transform: uppercase;
     }
+    .countdown-urgent {
+        color: #B71C1C;
+        font-weight: bold;
+        background-color: #FFCDD2;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        display: inline-block;
+    }
+    .countdown-warning {
+        color: #F57C00;
+        font-weight: bold;
+        background-color: #FFE0B2;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        display: inline-block;
+    }
+    .countdown-normal {
+        color: #2E7D32;
+        font-weight: bold;
+        background-color: #C8E6C9;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        display: inline-block;
+    }
+    .search-box {
+        background-color: #F5F5F5;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
     hr {
         border: 0;
         height: 1px;
@@ -101,7 +132,6 @@ def init_database():
     init_db()
 
 init_database()
-
 conn = get_connection()
 
 # Cabeçalho
@@ -139,21 +169,61 @@ def get_glossary():
     return pd.read_sql_query("SELECT * FROM glossary ORDER BY term", conn)
 
 def get_whitepapers():
-    return pd.read_sql_query("SELECT * FROM whitepapers", conn)
+    return pd.read_sql_query("SELECT * FROM whitepapers ORDER BY created_at DESC", conn)
+
+def get_cases():
+    return pd.read_sql_query("SELECT * FROM knowledge_base WHERE type='case_study' ORDER BY created_at DESC", conn)
+
+def days_until(date_value):
+    """Calcula dias até uma data"""
+    if pd.isna(date_value) or date_value is None:
+        return None
+    today = datetime.now().date()
+    if isinstance(date_value, str):
+        date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
+    delta = date_value - today
+    return delta.days
+
+def format_countdown(days):
+    """Formata contagem regressiva com cor"""
+    if days is None:
+        return ""
+    if days < 0:
+        return f"<span class='countdown-urgent'>⏰ Atrasado {abs(days)} dias</span>"
+    elif days == 0:
+        return "<span class='countdown-urgent'>🔥 Hoje!</span>"
+    elif days <= 7:
+        return f"<span class='countdown-urgent'>⚠️ {days} dias</span>"
+    elif days <= 30:
+        return f"<span class='countdown-warning'>📅 {days} dias</span>"
+    else:
+        return f"<span class='countdown-normal'>🗓️ {days} dias</span>"
 
 # ================================
-# DASHBOARD
+# DASHBOARD MELHORADO
 # ================================
 if menu == "📊 Dashboard":
     st.header("📊 Dashboard Estratégico")
 
-    # Métricas principais
+    # Carregar dados
     tasks = get_tasks()
+    events = get_events()
+    companies = get_companies()
+    advisors = get_advisors()
+    
+    # Métricas principais
     total_initiatives = len(tasks)
     completed = len(tasks[tasks['status'] == 'Done'])
     in_progress = len(tasks[tasks['status'] == 'In Progress'])
     todo = len(tasks[tasks['status'] == 'To Do'])
-
+    
+    # Métricas adicionais
+    total_events = len(events)
+    upcoming_events = len(events[events['start_date'] >= date.today().strftime('%Y-%m-%d')]) if not events.empty else 0
+    total_companies = len(companies)
+    total_advisors = len(advisors)
+    
+    # Primeira linha de métricas
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(f"""
@@ -167,6 +237,7 @@ if menu == "📊 Dashboard":
         <div class="metric-card">
             <div class="metric-value">{completed}</div>
             <div class="metric-label">Concluídas</div>
+            <small>{round(completed/total_initiatives*100 if total_initiatives>0 else 0,1)}%</small>
         </div>
         """, unsafe_allow_html=True)
     with col3:
@@ -183,22 +254,89 @@ if menu == "📊 Dashboard":
             <div class="metric-label">A Fazer</div>
         </div>
         """, unsafe_allow_html=True)
+    
+    # Segunda linha de métricas (operações)
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{total_events}</div>
+            <div class="metric-label">Eventos</div>
+            <small>{upcoming_events} futuros</small>
+        </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{total_companies}</div>
+            <div class="metric-label">Empresas Target</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{total_advisors}</div>
+            <div class="metric-label">Senior Advisors</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col4:
+        whitepapers = len(get_whitepapers())
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{whitepapers}</div>
+            <div class="metric-label">Whitepapers</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
-    st.subheader("📈 Progresso por Categoria")
-    if not tasks.empty:
-        cat_summary = tasks.groupby('category').size().reset_index(name='count')
-        st.bar_chart(cat_summary.set_index('category'))
+    
+    # Gráficos e análises
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📈 Progresso por Categoria")
+        if not tasks.empty:
+            cat_summary = tasks.groupby('category').size().reset_index(name='count')
+            st.bar_chart(cat_summary.set_index('category'))
+        else:
+            st.info("Nenhuma iniciativa cadastrada.")
+    
+    with col2:
+        st.subheader("🎯 Prioridades")
+        if not tasks.empty:
+            priority_summary = tasks.groupby('priority').size().reset_index(name='count')
+            st.bar_chart(priority_summary.set_index('priority'))
+        else:
+            st.info("Nenhuma iniciativa cadastrada.")
+    
+    # Próximos eventos
+    st.markdown("---")
+    st.subheader("📅 Próximos Eventos")
+    if not events.empty:
+        upcoming = events[events['start_date'] >= date.today().strftime('%Y-%m-%d')].head(5)
+        if not upcoming.empty:
+            for _, row in upcoming.iterrows():
+                days = days_until(row['start_date'])
+                countdown_html = format_countdown(days)
+                st.markdown(f"""
+                <div class="card">
+                    <h4>{row['name']}</h4>
+                    <p><strong>Data:</strong> {row['start_date']} | {countdown_html}</p>
+                    <p><strong>Local:</strong> {row['location'] or 'N/A'} {'(Virtual)' if row['is_virtual'] else ''}</p>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("Nenhum evento futuro agendado.")
     else:
-        st.info("Nenhuma iniciativa cadastrada.")
+        st.info("Nenhum evento cadastrado.")
 
 # ================================
-# KANBAN
+# KANBAN (mantido igual)
 # ================================
 elif menu == "📋 Kanban":
+    # [seu código Kanban existente - mantido igual]
     st.header("📋 Kanban - Iniciativas")
 
-    # Formulário para adicionar nova tarefa
     with st.expander("➕ Nova Iniciativa"):
         with st.form("new_task"):
             col1, col2 = st.columns(2)
@@ -225,7 +363,6 @@ elif menu == "📋 Kanban":
                 st.success("Iniciativa criada!")
                 st.rerun()
 
-    # Exibir Kanban
     tasks = get_tasks()
     if tasks.empty:
         st.info("Nenhuma tarefa cadastrada.")
@@ -236,11 +373,13 @@ elif menu == "📋 Kanban":
             todo_tasks = tasks[tasks['status'] == 'To Do']
             for _, row in todo_tasks.iterrows():
                 priority_class = "priority-high" if row['priority'] == 'Alta' else "priority-medium" if row['priority'] == 'Média' else "priority-low"
+                days = days_until(row['due_date']) if row['due_date'] else None
+                countdown_html = format_countdown(days) if days is not None else ""
                 st.markdown(f"""
                 <div class="card">
                     <h4>{row['title']}</h4>
                     <p><span class="{priority_class}">{row['priority']}</span> | {row['category']} | {row['subcategory']}</p>
-                    <p><strong>Resp:</strong> {row['owner_name'] or 'N/A'} | <strong>Data:</strong> {row['due_date'] or 'N/A'}</p>
+                    <p><strong>Resp:</strong> {row['owner_name'] or 'N/A'} | <strong>Data:</strong> {row['due_date'] or 'N/A'} {countdown_html}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button("→ Iniciar", key=f"start_{row['id']}"):
@@ -253,11 +392,13 @@ elif menu == "📋 Kanban":
             ip_tasks = tasks[tasks['status'] == 'In Progress']
             for _, row in ip_tasks.iterrows():
                 priority_class = "priority-high" if row['priority'] == 'Alta' else "priority-medium" if row['priority'] == 'Média' else "priority-low"
+                days = days_until(row['due_date']) if row['due_date'] else None
+                countdown_html = format_countdown(days) if days is not None else ""
                 st.markdown(f"""
                 <div class="card">
                     <h4>{row['title']}</h4>
                     <p><span class="{priority_class}">{row['priority']}</span> | {row['category']} | {row['subcategory']}</p>
-                    <p><strong>Resp:</strong> {row['owner_name'] or 'N/A'} | <strong>Data:</strong> {row['due_date'] or 'N/A'}</p>
+                    <p><strong>Resp:</strong> {row['owner_name'] or 'N/A'} | <strong>Data:</strong> {row['due_date'] or 'N/A'} {countdown_html}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button("✅ Concluir", key=f"done_{row['id']}"):
@@ -277,7 +418,7 @@ elif menu == "📋 Kanban":
                 """, unsafe_allow_html=True)
 
 # ================================
-# EVENTOS
+# EVENTOS MELHORADOS (com contagem regressiva)
 # ================================
 elif menu == "📅 Eventos":
     st.header("📅 Eventos do Setor")
@@ -306,31 +447,62 @@ elif menu == "📅 Eventos":
                 st.success("Evento adicionado!")
                 st.rerun()
 
+    # Filtros
+    with st.expander("🔍 Filtrar Eventos"):
+        col1, col2 = st.columns(2)
+        with col1:
+            filter_type = st.multiselect("Tipo", ["conference", "webinar", "workshop", "networking", "forum"])
+            filter_industry = st.multiselect("Indústria", ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands", "geral"])
+        with col2:
+            show_past = st.checkbox("Mostrar eventos passados", value=False)
+            show_virtual = st.checkbox("Mostrar apenas virtuais", value=False)
+
     events = get_events()
+    
+    # Aplicar filtros
+    if not events.empty:
+        if not show_past:
+            events = events[events['start_date'] >= date.today().strftime('%Y-%m-%d')]
+        if show_virtual:
+            events = events[events['is_virtual'] == True]
+        if filter_type:
+            events = events[events['event_type'].isin(filter_type)]
+        if filter_industry:
+            events = events[events['industry'].isin(filter_industry)]
+
     if events.empty:
-        st.info("Nenhum evento cadastrado.")
+        st.info("Nenhum evento encontrado com os filtros selecionados.")
     else:
         for _, row in events.iterrows():
+            days = days_until(row['start_date'])
+            countdown_html = format_countdown(days)
+            
             st.markdown(f"""
             <div class="card">
                 <h4>{row['name']}</h4>
                 <p><strong>Tipo:</strong> {row['event_type']} | <strong>Indústria:</strong> {row['industry']}</p>
-                <p><strong>Data:</strong> {row['start_date']} a {row['end_date']} | <strong>Local:</strong> {row['location'] or 'N/A'} {'(Virtual)' if row['is_virtual'] else ''}</p>
+                <p><strong>Data:</strong> {row['start_date']} a {row['end_date']} | {countdown_html}</p>
+                <p><strong>Local:</strong> {row['location'] or 'N/A'} {'(Virtual)' if row['is_virtual'] else ''}</p>
                 <p>{row['description']}</p>
             </div>
             """, unsafe_allow_html=True)
 
 # ================================
-# KNOWLEDGE BASE
+# KNOWLEDGE BASE MELHORADA (com buscadores)
 # ================================
 elif menu == "📚 Knowledge Base":
     st.header("📚 Knowledge Base")
 
-    tab1, tab2, tab3 = st.tabs(["📄 Whitepapers", "📖 Glossário", "📊 Cases"])
+    tab1, tab2, tab3 = st.tabs(["📄 Whitepapers", "📖 Glossário", "📊 Case Studies"])
 
     with tab1:
         st.subheader("Whitepapers")
-        with st.expander("➕ Novo Whitepaper"):
+        
+        # Buscador de whitepapers
+        with st.expander("🔍 Buscar Whitepapers", expanded=False):
+            search_term = st.text_input("Pesquisar por título, tópico ou autor", key="search_wp")
+        
+        with st.expander("➕ Novo Whitepaper", expanded=False):
             with st.form("new_wp"):
                 title = st.text_input("Título *")
                 topic = st.text_input("Tópico")
@@ -345,21 +517,41 @@ elif menu == "📚 Knowledge Base":
                     conn.commit()
                     st.success("Whitepaper adicionado!")
                     st.rerun()
+        
         wps = get_whitepapers()
         if not wps.empty:
+            # Aplicar busca
+            if search_term:
+                wps = wps[
+                    wps['title'].str.contains(search_term, case=False, na=False) |
+                    wps['topic'].str.contains(search_term, case=False, na=False) |
+                    wps['author_name'].str.contains(search_term, case=False, na=False)
+                ]
+            
+            st.write(f"**{len(wps)} whitepapers encontrados**")
             for _, row in wps.iterrows():
                 st.markdown(f"""
                 <div class="card">
                     <h4>{row['title']}</h4>
                     <p><strong>Tópico:</strong> {row['topic']} | <strong>Autor:</strong> {row['author_name']} | <strong>Status:</strong> {row['status']}</p>
                     <p>{row['content'][:200]}...</p>
-                    <p><a href="{row['document_link']}" target="_blank">Link</a></p>
+                    <p><a href="{row['document_link']}" target="_blank">🔗 Link para documento</a></p>
                 </div>
                 """, unsafe_allow_html=True)
+        else:
+            st.info("Nenhum whitepaper cadastrado.")
 
     with tab2:
         st.subheader("Glossário")
-        with st.expander("➕ Novo Termo"):
+        
+        # Buscador do glossário
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            search_term = st.text_input("🔍 Pesquisar termo ou definição", key="search_glossary")
+        with col2:
+            filter_category = st.selectbox("Categoria", ["Todos", "technical", "business", "acronym"])
+        
+        with st.expander("➕ Novo Termo", expanded=False):
             with st.form("new_term"):
                 term = st.text_input("Termo *")
                 definition = st.text_area("Definição *")
@@ -372,8 +564,19 @@ elif menu == "📚 Knowledge Base":
                     conn.commit()
                     st.success("Termo adicionado!")
                     st.rerun()
+        
         glossary = get_glossary()
         if not glossary.empty:
+            # Aplicar filtros
+            if search_term:
+                glossary = glossary[
+                    glossary['term'].str.contains(search_term, case=False, na=False) |
+                    glossary['definition'].str.contains(search_term, case=False, na=False)
+                ]
+            if filter_category != "Todos":
+                glossary = glossary[glossary['category'] == filter_category]
+            
+            st.write(f"**{len(glossary)} termos encontrados**")
             for _, row in glossary.iterrows():
                 st.markdown(f"""
                 <div class="card">
@@ -382,44 +585,86 @@ elif menu == "📚 Knowledge Base":
                     <p><strong>Categoria:</strong> {row['category']} | <strong>Exemplo:</strong> {row['example'] or 'N/A'}</p>
                 </div>
                 """, unsafe_allow_html=True)
+        else:
+            st.info("Nenhum termo cadastrado no glossário.")
 
     with tab3:
         st.subheader("Case Studies")
-        st.info("Funcionalidade em desenvolvimento. Em breve você poderá adicionar cases.")
+        
+        # Buscador de cases
+        with st.expander("🔍 Buscar Cases", expanded=False):
+            search_case = st.text_input("Pesquisar por título ou descrição", key="search_case")
+        
+        with st.expander("➕ Novo Case Study", expanded=False):
+            with st.form("new_case"):
+                title = st.text_input("Título do Case *")
+                category = st.selectbox("Categoria", ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands"])
+                summary = st.text_area("Resumo *")
+                content = st.text_area("Conteúdo completo")
+                author = st.text_input("Autor")
+                document_link = st.text_input("Link para documento")
+                tags = st.text_input("Tags (separadas por vírgula)")
+                
+                if st.form_submit_button("Salvar") and title and summary:
+                    cur = conn.cursor()
+                    cur.execute("""
+                        INSERT INTO knowledge_base (title, type, category, summary, content, author, tags, document_link, is_published)
+                        VALUES (%s, 'case_study', %s, %s, %s, %s, %s, %s, TRUE)
+                    """, (title, category, summary, content, author, tags, document_link))
+                    conn.commit()
+                    st.success("Case study adicionado!")
+                    st.rerun()
+        
+        # Buscar cases do banco
+        cases = get_cases()
+        
+        if cases.empty:
+            st.info("Nenhum case study cadastrado. Use o formulário acima para adicionar o primeiro case!")
+            
+            # Exemplo de case para demonstração (opcional)
+            with st.expander("📋 Ver exemplo de Case Study"):
+                st.markdown("""
+                **Título:** Otimização de Supply Chain com IA na Indústria ABC
+                
+                **Categoria:** supply_chain
+                
+                **Resumo:** Implementação de sistema de previsão de demanda usando machine learning reduziu estoques em 30% e aumentou disponibilidade de produtos.
+                
+                **Resultados:** Redução de custos, aumento de eficiência.
+                """)
+        else:
+            # Aplicar busca
+            if search_case:
+                cases = cases[
+                    cases['title'].str.contains(search_case, case=False, na=False) |
+                    cases['summary'].str.contains(search_case, case=False, na=False) |
+                    cases['tags'].str.contains(search_case, case=False, na=False)
+                ]
+            
+            st.write(f"**{len(cases)} cases encontrados**")
+            for _, row in cases.iterrows():
+                st.markdown(f"""
+                <div class="card">
+                    <h4>{row['title']}</h4>
+                    <p><strong>Categoria:</strong> {row['category']} | <strong>Autor:</strong> {row['author'] or 'N/A'}</p>
+                    <p><strong>Resumo:</strong> {row['summary']}</p>
+                    <p><strong>Tags:</strong> {row['tags'] or 'N/A'}</p>
+                    {f'<p><a href="{row["document_link"]}" target="_blank">🔗 Link para documento</a></p>' if row['document_link'] else ''}
+                </div>
+                """, unsafe_allow_html=True)
 
 # ================================
-# DESAFIOS & PRÓXIMOS PASSOS
-# ================================
-elif menu == "🎯 Desafios & Próximos Passos":
-    st.header("🎯 Desafios e Próximos Passos")
-
-    # Filtro por tipo
-    tipo = st.radio("Mostrar:", ["Desafios", "Próximos Passos", "Ferramentas"], horizontal=True)
-    cat_map = {"Desafios": "challenge", "Próximos Passos": "next_step", "Ferramentas": "tool"}
-    cat = cat_map[tipo]
-
-    tasks = get_tasks()
-    filtered = tasks[tasks['category'] == cat]
-
-    if filtered.empty:
-        st.info(f"Nenhum {tipo.lower()} cadastrado.")
-    else:
-        for _, row in filtered.iterrows():
-            priority_class = "priority-high" if row['priority'] == 'Alta' else "priority-medium" if row['priority'] == 'Média' else "priority-low"
-            st.markdown(f"""
-            <div class="card">
-                <h4>{row['title']}</h4>
-                <p><span class="{priority_class}">{row['priority']}</span> | {row['subcategory']} | Resp: {row['owner_name'] or 'N/A'}</p>
-                <p>{row['description']}</p>
-                <p><strong>Data limite:</strong> {row['due_date'] or 'N/A'}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-# ================================
-# EMPRESAS TARGET
+# EMPRESAS TARGET (com buscador)
 # ================================
 elif menu == "🏢 Empresas Target":
     st.header("🏢 Empresas Target")
+
+    # Buscador de empresas
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        search_term = st.text_input("🔍 Buscar por nome, indústria ou contato", key="search_companies")
+    with col2:
+        filter_status = st.selectbox("Status", ["Todos", "prospect", "contacted", "meeting", "proposal", "closed"])
 
     with st.expander("➕ Nova Empresa"):
         with st.form("new_company"):
@@ -450,6 +695,17 @@ elif menu == "🏢 Empresas Target":
     if companies.empty:
         st.info("Nenhuma empresa target cadastrada.")
     else:
+        # Aplicar filtros
+        if search_term:
+            companies = companies[
+                companies['name'].str.contains(search_term, case=False, na=False) |
+                companies['industry'].str.contains(search_term, case=False, na=False) |
+                companies['contact_person'].str.contains(search_term, case=False, na=False)
+            ]
+        if filter_status != "Todos":
+            companies = companies[companies['status'] == filter_status]
+        
+        st.write(f"**{len(companies)} empresas encontradas**")
         for _, row in companies.iterrows():
             st.markdown(f"""
             <div class="card">
@@ -462,10 +718,13 @@ elif menu == "🏢 Empresas Target":
             """, unsafe_allow_html=True)
 
 # ================================
-# SENIOR ADVISORS
+# SENIOR ADVISORS (com buscador)
 # ================================
 elif menu == "👥 Senior Advisors":
     st.header("👥 Senior Advisors")
+
+    # Buscador de advisors
+    search_term = st.text_input("🔍 Buscar por nome, expertise, empresa ou tópicos", key="search_advisors")
 
     with st.expander("➕ Novo Advisor"):
         with st.form("new_advisor"):
@@ -493,6 +752,16 @@ elif menu == "👥 Senior Advisors":
     if advisors.empty:
         st.info("Nenhum advisor cadastrado.")
     else:
+        # Aplicar busca
+        if search_term:
+            advisors = advisors[
+                advisors['name'].str.contains(search_term, case=False, na=False) |
+                advisors['expertise'].str.contains(search_term, case=False, na=False) |
+                advisors['company'].str.contains(search_term, case=False, na=False) |
+                advisors['topics'].str.contains(search_term, case=False, na=False)
+            ]
+        
+        st.write(f"**{len(advisors)} advisors encontrados**")
         for _, row in advisors.iterrows():
             st.markdown(f"""
             <div class="card">
@@ -507,4 +776,4 @@ elif menu == "👥 Senior Advisors":
 
 # Rodapé
 st.markdown("---")
-st.caption("TaskSync - Operações | Desenvolvido com Streamlit | Pronto para deploy com PostgreSQL")
+st.caption("TaskSync - Operações | Desenvolvido com Streamlit | - Raíssa Azevedo - 2026")
