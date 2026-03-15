@@ -1,37 +1,22 @@
 import os
 import psycopg2
-from psycopg2 import pool
-
-# Connection pool
-_connection_pool = None
 
 
-def get_connection_pool():
-    """Create or return connection pool"""
-    global _connection_pool
-
-    if _connection_pool is None:
-        _connection_pool = psycopg2.pool.SimpleConnectionPool(
-            1,
-            10,
-            os.environ["DATABASE_URL"]
-        )
-
-    return _connection_pool
-
+# ==============================
+# CONNECTION
+# ==============================
 
 def get_connection():
-    """Get connection from pool"""
-    return get_connection_pool().getconn()
+    """Create a new database connection"""
+    return psycopg2.connect(os.environ["DATABASE_URL"])
 
 
-def return_connection(conn):
-    """Return connection to pool"""
-    get_connection_pool().putconn(conn)
-
+# ==============================
+# DATABASE INITIALIZATION
+# ==============================
 
 def init_db():
-    """Create tables and insert initial data (except tasks)."""
+    """Create tables and initial data (without tasks)."""
 
     conn = get_connection()
     cur = conn.cursor()
@@ -200,7 +185,10 @@ def init_db():
     )
     """)
 
+    # ==============================
     # INDEXES
+    # ==============================
+
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)")
@@ -209,18 +197,20 @@ def init_db():
 
     conn.commit()
 
-    # -------- INITIAL DATA --------
+    # ==============================
+    # INITIAL DATA
+    # ==============================
 
     # GLOSSARY
     cur.execute("SELECT COUNT(*) FROM glossary")
     if cur.fetchone()[0] == 0:
 
         glossary_terms = [
-            ('Digital Twin', 'Réplica virtual de processos, produtos ou serviços', 'technical', 'Simulação, Gêmeo Digital', 'Usado para otimizar processos de manufatura'),
-            ('Manufacturing', 'Processo de transformação de matérias-primas em produtos acabados', 'business', 'Produção, Indústria', 'Indústria 4.0 na manufacturing'),
-            ('Supply Chain', 'Rede entre empresa e fornecedores para produção e distribuição', 'business', 'Logística', 'Otimização da supply chain com IA'),
-            ('Machine Learning', 'Subcampo da IA que permite aprendizado a partir de dados', 'technical', 'IA', 'ML para controle de qualidade'),
-            ('Computer Vision', 'Campo da IA que interpreta imagens', 'technical', 'IA', 'Inspeção visual automatizada'),
+            ('Digital Twin', 'Réplica virtual de processos ou produtos', 'technical', 'Simulação', 'Usado em manufatura'),
+            ('Manufacturing', 'Processo de produção industrial', 'business', 'Produção', 'Indústria 4.0'),
+            ('Supply Chain', 'Rede logística de produção e distribuição', 'business', 'Logística', 'IA na cadeia de suprimentos'),
+            ('Machine Learning', 'IA que aprende com dados', 'technical', 'IA', 'Controle de qualidade'),
+            ('Computer Vision', 'IA para interpretar imagens', 'technical', 'IA', 'Inspeção visual automática')
         ]
 
         cur.executemany(
@@ -234,7 +224,7 @@ def init_db():
 
         companies = [
             ('Indústrias ABC', 'manufacturing', 'large', 'João Silva', 'joao@abc.com', '11 99999-9999', 'Alto', 'Empresa líder', 'prospect', '2024-01-15', 'Agendar reunião'),
-            ('SaúdeTech', 'healthcare', 'medium', 'Maria Santos', 'maria@saudetech.com', '11 88888-8888', 'Médio', 'Startup de saúde', 'contacted', '2024-01-10', 'Enviar proposta')
+            ('SaúdeTech', 'healthcare', 'medium', 'Maria Santos', 'maria@saudetech.com', '11 88888-8888', 'Médio', 'Startup saúde', 'contacted', '2024-01-10', 'Enviar proposta')
         ]
 
         cur.executemany("""
@@ -248,7 +238,7 @@ def init_db():
     if cur.fetchone()[0] == 0:
 
         events = [
-            ('Industry 4.0 Summit', 'Conferência sobre indústria 4.0', 'conference', 'manufacturing', '2024-03-15', '2024-03-17', 'São Paulo', False, 'www.industry40summit.com', '', '', 'upcoming'),
+            ('Industry 4.0 Summit', 'Conferência indústria 4.0', 'conference', 'manufacturing', '2024-03-15', '2024-03-17', 'São Paulo', False, 'www.industry40summit.com', '', '', 'upcoming'),
             ('Supply Chain Tech', 'Workshop supply chain', 'workshop', 'supply_chain', '2024-02-10', '2024-02-10', 'Online', True, 'www.supplychaintech.com', '', '', 'upcoming')
         ]
 
@@ -258,28 +248,17 @@ def init_db():
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, events)
 
-    # ADVISORS
-    cur.execute("SELECT COUNT(*) FROM senior_advisors")
-    if cur.fetchone()[0] == 0:
-
-        advisors = [
-            ('Dr. Carlos Silva', 'Digital Twin', 'Tecnologia', '', 'Consultor', 'email@email.com', 'linkedin.com', ''),
-            ('Ana Souza', 'Supply Chain', 'Logística', '', 'LogConsult', 'email@email.com', 'linkedin.com', '')
-        ]
-
-        cur.executemany("""
-        INSERT INTO senior_advisors
-        (name,expertise,topics,events_participated,company,contact_info,linkedin,notes)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-        """, advisors)
-
     conn.commit()
 
     cur.close()
-    return_connection(conn)
+    conn.close()
 
-    print("✅ Banco inicializado com sucesso")
+    print("✅ Database initialized successfully")
 
+
+# ==============================
+# MIGRATIONS
+# ==============================
 
 def migrate_database():
     """Future migrations"""
