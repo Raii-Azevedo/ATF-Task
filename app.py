@@ -251,21 +251,23 @@ if menu == "📊 Dashboard":
     # Converter datas para datetime para comparação segura
     today = pd.Timestamp.now().normalize()
     
-    # Métricas principais
+    # ===== MÉTRICAS PRINCIPAIS =====
     total_initiatives = len(tasks)
     completed = len(tasks[tasks['status'] == 'Done']) if not tasks.empty else 0
     in_progress = len(tasks[tasks['status'] == 'In Progress']) if not tasks.empty else 0
     todo = len(tasks[tasks['status'] == 'To Do']) if not tasks.empty else 0
     
-    # Calcular eventos futuros de forma segura
+    # ===== MÉTRICAS DE OPERAÇÕES =====
+    total_events = len(events)
+    total_companies = len(companies)
+    total_advisors = len(advisors)
+    total_whitepapers = len(whitepapers)
+    
+    # Calcular eventos futuros
     upcoming_events = 0
     if not events.empty and 'start_date' in events.columns:
         events['start_date_dt'] = pd.to_datetime(events['start_date'], errors='coerce')
         upcoming_events = len(events[events['start_date_dt'] >= today])
-    
-    total_companies = len(companies)
-    total_advisors = len(advisors)
-    total_whitepapers = len(whitepapers)
     
     # Primeira linha de métricas - INICIATIVAS
     st.markdown("### 📊 Visão Geral de Iniciativas")
@@ -363,12 +365,18 @@ if menu == "📊 Dashboard":
         else:
             st.info("Nenhuma iniciativa cadastrada.")
     
-    # Próximos eventos
+    # PRÓXIMOS EVENTOS - AGORA FUNCIONANDO CORRETAMENTE
     st.markdown("---")
     st.subheader("📅 Próximos Eventos")
+    
     if not events.empty and 'start_date' in events.columns:
-        events['start_date_dt'] = pd.to_datetime(events['start_date'], errors='coerce')
-        upcoming = events[events['start_date_dt'] >= today].sort_values('start_date_dt').head(5)
+        # Garantir que a coluna de data está no formato correto
+        events_display = events.copy()
+        events_display['start_date_dt'] = pd.to_datetime(events_display['start_date'], errors='coerce')
+        today_dt = pd.Timestamp.now().normalize()
+        
+        # Filtrar apenas eventos futuros ou de hoje
+        upcoming = events_display[events_display['start_date_dt'] >= today_dt].sort_values('start_date_dt').head(5)
         
         if not upcoming.empty:
             for _, row in upcoming.iterrows():
@@ -381,13 +389,18 @@ if menu == "📊 Dashboard":
                     <h4>{row['name'] if 'name' in row else 'Evento sem nome'}</h4>
                     <p><strong>Data:</strong> {start_date_str} | {countdown_html}</p>
                     <p><strong>Local:</strong> {row.get('location', 'N/A')} {'(Virtual)' if row.get('is_virtual', False) else ''}</p>
+                    <p><strong>Descrição:</strong> {row.get('description', 'Sem descrição')[:100]}...</p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("Nenhum evento futuro agendado.")
+            st.info("🎉 Nenhum evento futuro agendado. Que tal adicionar um na seção de Eventos?")
     else:
-        st.info("Nenhum evento cadastrado.")
-
+        st.info("📆 Nenhum evento cadastrado. Vá para a seção 'Eventos' e adicione alguns!")
+        
+        # Botão rápido para ir para eventos
+        if st.button("➕ Adicionar Evento Agora"):
+            st.switch_page("app.py?menu=📅 Eventos")  # Isso vai mudar para a página de eventos
+            
 # ================================
 # KANBAN
 # ================================
