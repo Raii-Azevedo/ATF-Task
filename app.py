@@ -2,7 +2,6 @@ import streamlit as st
 from database import get_connection, init_db
 import pandas as pd
 from datetime import datetime, date
-import time
 
 # Configuração da página
 st.set_page_config(
@@ -73,7 +72,7 @@ st.markdown("""
         background-color: #FFFFFF;
         border: 1px solid #E0E0E0;
         border-radius: 8px;
-        padding: 1.5rem;
+        padding: 1.5rem;    
         text-align: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         color: #1E1E1E;
@@ -200,7 +199,7 @@ def format_countdown(days):
         return f"<span class='countdown-normal'>🗓️ {days} dias</span>"
 
 # ================================
-# DASHBOARD MELHORADO
+# DASHBOARD CORRIGIDO
 # ================================
 if menu == "📊 Dashboard":
     st.header("📊 Dashboard Estratégico")
@@ -211,15 +210,25 @@ if menu == "📊 Dashboard":
     companies = get_companies()
     advisors = get_advisors()
     
+    # Converter datas para datetime para comparação segura
+    today = pd.Timestamp.now().normalize()
+    
     # Métricas principais
     total_initiatives = len(tasks)
-    completed = len(tasks[tasks['status'] == 'Done'])
-    in_progress = len(tasks[tasks['status'] == 'In Progress'])
-    todo = len(tasks[tasks['status'] == 'To Do'])
+    completed = len(tasks[tasks['status'] == 'Done']) if not tasks.empty else 0
+    in_progress = len(tasks[tasks['status'] == 'In Progress']) if not tasks.empty else 0
+    todo = len(tasks[tasks['status'] == 'To Do']) if not tasks.empty else 0
     
-    # Métricas adicionais
+    # Métricas adicionais com tratamento seguro
     total_events = len(events)
-    upcoming_events = len(events[events['start_date'] >= date.today().strftime('%Y-%m-%d')]) if not events.empty else 0
+    
+    # Calcular eventos futuros de forma segura
+    upcoming_events = 0
+    if not events.empty and 'start_date' in events.columns:
+        # Converter start_date para datetime se for string
+        events['start_date_dt'] = pd.to_datetime(events['start_date'], errors='coerce')
+        upcoming_events = len(events[events['start_date_dt'] >= today])
+    
     total_companies = len(companies)
     total_advisors = len(advisors)
     
@@ -233,11 +242,12 @@ if menu == "📊 Dashboard":
         </div>
         """, unsafe_allow_html=True)
     with col2:
+        completion_rate = round(completed/total_initiatives*100 if total_initiatives>0 else 0, 1)
         st.markdown(f"""
         <div class="metric-card">
             <div class="metric-value">{completed}</div>
             <div class="metric-label">Concluídas</div>
-            <small>{round(completed/total_initiatives*100 if total_initiatives>0 else 0,1)}%</small>
+            <small>{completion_rate}%</small>
         </div>
         """, unsafe_allow_html=True)
     with col3:
@@ -295,7 +305,7 @@ if menu == "📊 Dashboard":
     
     with col1:
         st.subheader("📈 Progresso por Categoria")
-        if not tasks.empty:
+        if not tasks.empty and 'category' in tasks.columns:
             cat_summary = tasks.groupby('category').size().reset_index(name='count')
             st.bar_chart(cat_summary.set_index('category'))
         else:
@@ -303,7 +313,7 @@ if menu == "📊 Dashboard":
     
     with col2:
         st.subheader("🎯 Prioridades")
-        if not tasks.empty:
+        if not tasks.empty and 'priority' in tasks.columns:
             priority_summary = tasks.groupby('priority').size().reset_index(name='count')
             st.bar_chart(priority_summary.set_index('priority'))
         else:
@@ -312,17 +322,23 @@ if menu == "📊 Dashboard":
     # Próximos eventos
     st.markdown("---")
     st.subheader("📅 Próximos Eventos")
-    if not events.empty:
-        upcoming = events[events['start_date'] >= date.today().strftime('%Y-%m-%d')].head(5)
+    if not events.empty and 'start_date' in events.columns:
+        # Garantir que start_date está em formato datetime
+        events['start_date_dt'] = pd.to_datetime(events['start_date'], errors='coerce')
+        upcoming = events[events['start_date_dt'] >= today].sort_values('start_date_dt').head(5)
+        
         if not upcoming.empty:
             for _, row in upcoming.iterrows():
-                days = days_until(row['start_date'])
-                countdown_html = format_countdown(days)
+                # Usar a data original para exibição
+                start_date_str = row['start_date'] if pd.notna(row['start_date']) else "Data não informada"
+                days = days_until(row['start_date']) if pd.notna(row['start_date']) else None
+                countdown_html = format_countdown(days) if days is not None else ""
+                
                 st.markdown(f"""
                 <div class="card">
-                    <h4>{row['name']}</h4>
-                    <p><strong>Data:</strong> {row['start_date']} | {countdown_html}</p>
-                    <p><strong>Local:</strong> {row['location'] or 'N/A'} {'(Virtual)' if row['is_virtual'] else ''}</p>
+                    <h4>{row['name'] if 'name' in row else 'Evento sem nome'}</h4>
+                    <p><strong>Data:</strong> {start_date_str} | {countdown_html}</p>
+                    <p><strong>Local:</strong> {row.get('location', 'N/A')} {'(Virtual)' if row.get('is_virtual', False) else ''}</p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -417,80 +433,34 @@ elif menu == "📋 Kanban":
                 </div>
                 """, unsafe_allow_html=True)
 
-# ================================
-# EVENTOS MELHORADOS (com contagem regressiva)
-# ================================
-elif menu == "📅 Eventos":
-    st.header("📅 Eventos do Setor")
-
-    with st.expander("➕ Novo Evento"):
-        with st.form("new_event"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Nome do evento *")
-                event_type = st.selectbox("Tipo", ["conference", "webinar", "workshop", "networking", "forum"])
-                industry = st.selectbox("Indústria", ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands", "geral"])
-            with col2:
-                start_date = st.date_input("Data início")
-                end_date = st.date_input("Data fim")
-                location = st.text_input("Local")
-                is_virtual = st.checkbox("Evento virtual")
-            description = st.text_area("Descrição")
-            submitted = st.form_submit_button("Salvar")
-            if submitted and name:
-                cur = conn.cursor()
-                cur.execute("""
-                    INSERT INTO events (name, description, event_type, industry, start_date, end_date, location, is_virtual)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (name, description, event_type, industry, start_date, end_date, location, is_virtual))
-                conn.commit()
-                st.success("Evento adicionado!")
-                st.rerun()
-
-    # Filtros
-    with st.expander("🔍 Filtrar Eventos"):
-        col1, col2 = st.columns(2)
-        with col1:
-            filter_type = st.multiselect("Tipo", ["conference", "webinar", "workshop", "networking", "forum"])
-            filter_industry = st.multiselect("Indústria", ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands", "geral"])
-        with col2:
-            show_past = st.checkbox("Mostrar eventos passados", value=False)
-            show_virtual = st.checkbox("Mostrar apenas virtuais", value=False)
-
-    events = get_events()
+def days_until(date_value):
+    """Calcula dias até uma data de forma segura"""
+    if pd.isna(date_value) or date_value is None:
+        return None
     
-    # Aplicar filtros
-    if not events.empty:
-        if not show_past:
-            events = events[events['start_date'] >= date.today().strftime('%Y-%m-%d')]
-        if show_virtual:
-            events = events[events['is_virtual'] == True]
-        if filter_type:
-            events = events[events['event_type'].isin(filter_type)]
-        if filter_industry:
-            events = events[events['industry'].isin(filter_industry)]
-
-    if events.empty:
-        st.info("Nenhum evento encontrado com os filtros selecionados.")
-    else:
-        for _, row in events.iterrows():
-            days = days_until(row['start_date'])
-            countdown_html = format_countdown(days)
-            
-            st.markdown(f"""
-            <div class="card">
-                <h4>{row['name']}</h4>
-                <p><strong>Tipo:</strong> {row['event_type']} | <strong>Indústria:</strong> {row['industry']}</p>
-                <p><strong>Data:</strong> {row['start_date']} a {row['end_date']} | {countdown_html}</p>
-                <p><strong>Local:</strong> {row['location'] or 'N/A'} {'(Virtual)' if row['is_virtual'] else ''}</p>
-                <p>{row['description']}</p>
-            </div>
-            """, unsafe_allow_html=True)
+    today = datetime.now().date()
+    
+    # Se for string, converter para date
+    if isinstance(date_value, str):
+        try:
+            date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+    # Se for Timestamp do pandas
+    elif hasattr(date_value, 'date'):
+        date_value = date_value.date()
+    # Se já for date, manter
+    
+    if not isinstance(date_value, date):
+        return None
+        
+    delta = date_value - today
+    return delta.days
 
 # ================================
 # KNOWLEDGE BASE MELHORADA (com buscadores)
 # ================================
-elif menu == "📚 Knowledge Base":
+if menu == "📚 Knowledge Base":
     st.header("📚 Knowledge Base")
 
     tab1, tab2, tab3 = st.tabs(["📄 Whitepapers", "📖 Glossário", "📊 Case Studies"])
@@ -656,7 +626,7 @@ elif menu == "📚 Knowledge Base":
 # ================================
 # EMPRESAS TARGET (com buscador)
 # ================================
-elif menu == "🏢 Empresas Target":
+if menu == "🏢 Empresas Target":
     st.header("🏢 Empresas Target")
 
     # Buscador de empresas
@@ -720,7 +690,7 @@ elif menu == "🏢 Empresas Target":
 # ================================
 # SENIOR ADVISORS (com buscador)
 # ================================
-elif menu == "👥 Senior Advisors":
+if menu == "👥 Senior Advisors":
     st.header("👥 Senior Advisors")
 
     # Buscador de advisors
