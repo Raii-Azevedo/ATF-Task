@@ -96,9 +96,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Inicializa banco de dados
-if "db_initialized" not in st.session_state:
+@st.cache_resource
+def init_database():
     init_db()
-    st.session_state.db_initialized = True
+
+init_database()
 
 conn = get_connection()
 
@@ -243,7 +245,7 @@ elif menu == "📋 Kanban":
                 """, unsafe_allow_html=True)
                 if st.button("→ Iniciar", key=f"start_{row['id']}"):
                     cur = conn.cursor()
-                    cur.execute("UPDATE tasks SET status='In Progress' WHERE id=?", (row['id'],))
+                    cur.execute("UPDATE tasks SET status='In Progress' WHERE id=%s", (row['id'],))
                     conn.commit()
                     st.rerun()
         with col2:
@@ -260,7 +262,7 @@ elif menu == "📋 Kanban":
                 """, unsafe_allow_html=True)
                 if st.button("✅ Concluir", key=f"done_{row['id']}"):
                     cur = conn.cursor()
-                    cur.execute("UPDATE tasks SET status='Done', completed_date=? WHERE id=?", (date.today(), row['id']))
+                    cur.execute("UPDATE tasks SET status='Done', completed_date=%s WHERE id=%s", (date.today(), row['id']))
                     conn.commit()
                     st.rerun()
         with col3:
