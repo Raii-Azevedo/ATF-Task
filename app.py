@@ -96,7 +96,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Inicializa banco de dados
-init_db()
+if "db_initialized" not in st.session_state:
+    init_db()
+    st.session_state.db_initialized = True
+
 conn = get_connection()
 
 # Cabeçalho
@@ -214,7 +217,7 @@ elif menu == "📋 Kanban":
                 cur = conn.cursor()
                 cur.execute("""
                     INSERT INTO tasks (title, description, category, subcategory, priority, status, owner_name, due_date, target_companies, document_link)
-                    VALUES (?, ?, ?, ?, ?, 'To Do', ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, 'To Do', %s, %s, %s, %s)
                 """, (title, description, category, subcategory, priority, owner_name, due_date, target_companies, document_link))
                 conn.commit()
                 st.success("Iniciativa criada!")
@@ -295,7 +298,7 @@ elif menu == "📅 Eventos":
                 cur = conn.cursor()
                 cur.execute("""
                     INSERT INTO events (name, description, event_type, industry, start_date, end_date, location, is_virtual)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (name, description, event_type, industry, start_date, end_date, location, is_virtual))
                 conn.commit()
                 st.success("Evento adicionado!")
@@ -335,7 +338,7 @@ elif menu == "📚 Knowledge Base":
                 content = st.text_area("Conteúdo (resumo)")
                 if st.form_submit_button("Salvar") and title:
                     cur = conn.cursor()
-                    cur.execute("INSERT INTO whitepapers (title, topic, author_name, status, document_link, content) VALUES (?, ?, ?, ?, ?, ?)",
+                    cur.execute("INSERT INTO whitepapers (title, topic, author_name, status, document_link, content) VALUES (%s, %s, %s, %s, %s, %s)",
                                 (title, topic, author, status, document_link, content))
                     conn.commit()
                     st.success("Whitepaper adicionado!")
@@ -362,7 +365,7 @@ elif menu == "📚 Knowledge Base":
                 example = st.text_input("Exemplo")
                 if st.form_submit_button("Salvar") and term and definition:
                     cur = conn.cursor()
-                    cur.execute("INSERT INTO glossary (term, definition, category, example) VALUES (?, ?, ?, ?)",
+                    cur.execute("INSERT INTO glossary (term, definition, category, example) VALUES (%s, %s, %s, %s)",
                                 (term, definition, category, example))
                     conn.commit()
                     st.success("Termo adicionado!")
@@ -435,7 +438,7 @@ elif menu == "🏢 Empresas Target":
                 cur = conn.cursor()
                 cur.execute("""
                     INSERT INTO target_companies (name, industry, size, status, contact_person, contact_email, contact_phone, potential_value, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (name, industry, size, status, contact_person, contact_email, contact_phone, potential_value, notes))
                 conn.commit()
                 st.success("Empresa adicionada!")
@@ -478,7 +481,7 @@ elif menu == "👥 Senior Advisors":
                 cur = conn.cursor()
                 cur.execute("""
                     INSERT INTO senior_advisors (name, expertise, company, topics, events_participated, linkedin, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (name, expertise, company, topics, events, linkedin, notes))
                 conn.commit()
                 st.success("Advisor adicionado!")
