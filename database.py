@@ -213,7 +213,7 @@ def init_db():
 
     # Glossário
     cur.execute("SELECT COUNT(*) FROM glossary")
-    if cur.fetchone()['count'] == 0:
+    if cur.fetchone()[0] == 0:
         glossary_terms = [
             ('Digital Twin', 'Réplica virtual de processos, produtos ou serviços', 'technical', 'Simulação, Gêmeo Digital', 'Usado para otimizar processos de manufatura'),
             ('Manufacturing', 'Processo de transformação de matérias-primas em produtos acabados', 'business', 'Produção, Indústria', 'Indústria 4.0 na manufacturing'),
@@ -233,7 +233,7 @@ def init_db():
 
     # Target Companies
     cur.execute("SELECT COUNT(*) FROM target_companies")
-    if cur.fetchone()['count'] == 0:
+    if cur.fetchone()[0] == 0:
         companies = [
             ('Indústrias ABC', 'manufacturing', 'large', 'João Silva', 'joao@abc.com', '11 99999-9999', 'Alto', 'Empresa líder em manufatura', 'prospect', '2024-01-15', 'Agendar reunião'),
             ('SaúdeTech', 'healthcare', 'medium', 'Maria Santos', 'maria@saudetech.com', '11 88888-8888', 'Médio', 'Startup de saúde digital', 'contacted', '2024-01-10', 'Enviar proposta'),
@@ -248,7 +248,7 @@ def init_db():
 
     # Events
     cur.execute("SELECT COUNT(*) FROM events")
-    if cur.fetchone()['count'] == 0:
+    if cur.fetchone()[0] == 0:
         events = [
             ('Industry 4.0 Summit', 'Conferência sobre indústria 4.0 e inovação', 'conference', 'manufacturing', '2024-03-15', '2024-03-17', 'São Paulo', False, 'www.industry40summit.com', 'Empresas: ABC, XYZ', 'Evento principal do setor', 'upcoming'),
             ('Supply Chain Tech', 'Workshop de tecnologia em supply chain', 'workshop', 'supply_chain', '2024-02-10', '2024-02-10', 'Online', True, 'www.supplychaintech.com', 'Palestrantes internacionais', 'Inscrições abertas', 'upcoming'),
@@ -263,7 +263,7 @@ def init_db():
 
     # Senior Advisors
     cur.execute("SELECT COUNT(*) FROM senior_advisors")
-    if cur.fetchone()['count'] == 0:
+    if cur.fetchone()[0] == 0:
         advisors = [
             ('Dr. Carlos Silva', 'Digital Twin, Indústria 4.0', 'Implementação, Estratégia, Tecnologia', 'Web Summit, Tech Forum', 'Consultor Independente', 'carlos.silva@email.com', 'linkedin.com/in/carlossilva', 'Especialista em transformação digital'),
             ('Ana Souza', 'Supply Chain, Logística', 'Otimização, IA em Logística', 'Supply Chain Conference, LogTech', 'LogConsult', 'ana.souza@email.com', 'linkedin.com/in/anasouza', 'Ex-diretora de logística de grande empresa'),
@@ -278,7 +278,7 @@ def init_db():
 
     # Tasks (iniciativas de exemplo)
     cur.execute("SELECT COUNT(*) FROM tasks")
-    if cur.fetchone()['count'] == 0:
+    if cur.fetchone()[0] == 0:
         initiatives = [
             # (title, description, category, subcategory, status, priority, progress, owner_id, owner_name, created_date, due_date, notes, related_initiative, document_link, notion_link, target_companies)
             ('Fortalecer conexão com Manufacturing', 'Grande potencial de geração de valor em áreas de Manufacturing', 'challenge', 'manufacturing', 'To Do', 'Alta', 0, 1, 'João', '2024-01-01', '2024-03-31', 'Iniciativa estratégica', 'initiative_001', '/docs/manufacturing', 'notion.link/123', 'Indústrias ABC, XYZ'),
