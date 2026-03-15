@@ -117,7 +117,7 @@ with st.sidebar:
     st.image("https://via.placeholder.com/200x80/0A2647/FFFFFF?text=TaskSync", use_column_width=True)
     menu = st.radio(
         "Navegação",
-        ["📊 Dashboard", "📋 Kanban", "📅 Eventos", "📚 Knowledge Base", "🎯 Desafios & Próximos Passos", "🏢 Empresas Target", "👥 Senior Advisors"]
+        ["📊 Dashboard", "📋 Kanban", "📅 Eventos", "📚 Knowledge Base", "🏢 Empresas Target", "👥 Senior Advisors"]
     )
     st.markdown("---")
     st.caption("Versão 2.0 - Pronto para PostgreSQL")
