@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS customizado (mantido igual, mas adicionei algumas classes novas)
+# CSS customizado - ADICIONEI ESTILOS MELHORES PARA OS CARDS
 st.markdown("""
 <style>
     /* Cores seguras para texto */
@@ -68,25 +68,47 @@ st.markdown("""
     .stButton>button:hover {
         background-color: #2C5F8A;
     }
+    
+    /* CARDS DO DASHBOARD MELHORADOS */
     .metric-card {
-        background-color: #FFFFFF;
+        background: linear-gradient(135deg, #FFFFFF, #F8F9FA);
         border: 1px solid #E0E0E0;
-        border-radius: 8px;
-        padding: 1.5rem;    
+        border-radius: 12px;
+        padding: 1.8rem 1rem;
         text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         color: #1E1E1E;
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+        min-height: 160px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
     }
     .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
+        font-size: 2.5rem;
+        font-weight: 700;
         color: #0A2647;
+        line-height: 1.2;
+        margin-bottom: 0.3rem;
     }
     .metric-label {
-        color: #555;
+        color: #5A6A7E;
         font-size: 0.9rem;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
     }
+    .metric-small {
+        color: #7F8C8D;
+        font-size: 0.8rem;
+        margin-top: 0.3rem;
+    }
+    
     .countdown-urgent {
         color: #B71C1C;
         font-weight: bold;
@@ -149,7 +171,7 @@ with st.sidebar:
         ["📊 Dashboard", "📋 Kanban", "📅 Eventos", "📚 Knowledge Base", "🏢 Empresas Target", "👥 Senior Advisors"]
     )
     st.markdown("---")
-    st.caption("Versão 2.0 - Pronto para PostgreSQL")
+    st.caption("Versão 2.0 - Raíssa Azevedo - 2026")
 
 # Funções auxiliares para obter dados
 def get_tasks():
@@ -173,13 +195,28 @@ def get_whitepapers():
 def get_cases():
     return pd.read_sql_query("SELECT * FROM knowledge_base WHERE type='case_study' ORDER BY created_at DESC", conn)
 
+# FUNÇÃO DAYS_UNTIL CORRIGIDA (UMA ÚNICA VEZ)
 def days_until(date_value):
-    """Calcula dias até uma data"""
+    """Calcula dias até uma data de forma segura"""
     if pd.isna(date_value) or date_value is None:
         return None
+    
     today = datetime.now().date()
+    
+    # Se for string, converter para date
     if isinstance(date_value, str):
-        date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
+        try:
+            date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+    # Se for Timestamp do pandas
+    elif hasattr(date_value, 'date'):
+        date_value = date_value.date()
+    # Se já for date, manter
+    
+    if not isinstance(date_value, date):
+        return None
+        
     delta = date_value - today
     return delta.days
 
@@ -209,6 +246,7 @@ if menu == "📊 Dashboard":
     events = get_events()
     companies = get_companies()
     advisors = get_advisors()
+    whitepapers = get_whitepapers()
     
     # Converter datas para datetime para comparação segura
     today = pd.Timestamp.now().normalize()
@@ -219,21 +257,20 @@ if menu == "📊 Dashboard":
     in_progress = len(tasks[tasks['status'] == 'In Progress']) if not tasks.empty else 0
     todo = len(tasks[tasks['status'] == 'To Do']) if not tasks.empty else 0
     
-    # Métricas adicionais com tratamento seguro
-    total_events = len(events)
-    
     # Calcular eventos futuros de forma segura
     upcoming_events = 0
     if not events.empty and 'start_date' in events.columns:
-        # Converter start_date para datetime se for string
         events['start_date_dt'] = pd.to_datetime(events['start_date'], errors='coerce')
         upcoming_events = len(events[events['start_date_dt'] >= today])
     
     total_companies = len(companies)
     total_advisors = len(advisors)
+    total_whitepapers = len(whitepapers)
     
-    # Primeira linha de métricas
+    # Primeira linha de métricas - INICIATIVAS
+    st.markdown("### 📊 Visão Geral de Iniciativas")
     col1, col2, col3, col4 = st.columns(4)
+    
     with col1:
         st.markdown(f"""
         <div class="metric-card">
@@ -241,15 +278,17 @@ if menu == "📊 Dashboard":
             <div class="metric-label">Total Iniciativas</div>
         </div>
         """, unsafe_allow_html=True)
+    
     with col2:
         completion_rate = round(completed/total_initiatives*100 if total_initiatives>0 else 0, 1)
         st.markdown(f"""
         <div class="metric-card">
             <div class="metric-value">{completed}</div>
             <div class="metric-label">Concluídas</div>
-            <small>{completion_rate}%</small>
+            <div class="metric-small">{completion_rate}% do total</div>
         </div>
         """, unsafe_allow_html=True)
+    
     with col3:
         st.markdown(f"""
         <div class="metric-card">
@@ -257,6 +296,7 @@ if menu == "📊 Dashboard":
             <div class="metric-label">Em Andamento</div>
         </div>
         """, unsafe_allow_html=True)
+    
     with col4:
         st.markdown(f"""
         <div class="metric-card">
@@ -265,16 +305,19 @@ if menu == "📊 Dashboard":
         </div>
         """, unsafe_allow_html=True)
     
-    # Segunda linha de métricas (operações)
+    # Segunda linha de métricas - OPERAÇÕES
+    st.markdown("### 🏭 Operações & Mercado")
     col1, col2, col3, col4 = st.columns(4)
+    
     with col1:
         st.markdown(f"""
         <div class="metric-card">
             <div class="metric-value">{total_events}</div>
             <div class="metric-label">Eventos</div>
-            <small>{upcoming_events} futuros</small>
+            <div class="metric-small">{upcoming_events} futuros</div>
         </div>
         """, unsafe_allow_html=True)
+    
     with col2:
         st.markdown(f"""
         <div class="metric-card">
@@ -282,6 +325,7 @@ if menu == "📊 Dashboard":
             <div class="metric-label">Empresas Target</div>
         </div>
         """, unsafe_allow_html=True)
+    
     with col3:
         st.markdown(f"""
         <div class="metric-card">
@@ -289,11 +333,11 @@ if menu == "📊 Dashboard":
             <div class="metric-label">Senior Advisors</div>
         </div>
         """, unsafe_allow_html=True)
+    
     with col4:
-        whitepapers = len(get_whitepapers())
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">{whitepapers}</div>
+            <div class="metric-value">{total_whitepapers}</div>
             <div class="metric-label">Whitepapers</div>
         </div>
         """, unsafe_allow_html=True)
@@ -323,13 +367,11 @@ if menu == "📊 Dashboard":
     st.markdown("---")
     st.subheader("📅 Próximos Eventos")
     if not events.empty and 'start_date' in events.columns:
-        # Garantir que start_date está em formato datetime
         events['start_date_dt'] = pd.to_datetime(events['start_date'], errors='coerce')
         upcoming = events[events['start_date_dt'] >= today].sort_values('start_date_dt').head(5)
         
         if not upcoming.empty:
             for _, row in upcoming.iterrows():
-                # Usar a data original para exibição
                 start_date_str = row['start_date'] if pd.notna(row['start_date']) else "Data não informada"
                 days = days_until(row['start_date']) if pd.notna(row['start_date']) else None
                 countdown_html = format_countdown(days) if days is not None else ""
@@ -347,10 +389,9 @@ if menu == "📊 Dashboard":
         st.info("Nenhum evento cadastrado.")
 
 # ================================
-# KANBAN (mantido igual)
+# KANBAN
 # ================================
 elif menu == "📋 Kanban":
-    # [seu código Kanban existente - mantido igual]
     st.header("📋 Kanban - Iniciativas")
 
     with st.expander("➕ Nova Iniciativa"):
@@ -433,34 +474,91 @@ elif menu == "📋 Kanban":
                 </div>
                 """, unsafe_allow_html=True)
 
-def days_until(date_value):
-    """Calcula dias até uma data de forma segura"""
-    if pd.isna(date_value) or date_value is None:
-        return None
+# ================================
+# EVENTOS - CORRIGIDO E REINSERIDO
+# ================================
+elif menu == "📅 Eventos":
+    st.header("📅 Eventos do Setor")
+
+    with st.expander("➕ Novo Evento"):
+        with st.form("new_event"):
+            col1, col2 = st.columns(2)
+            with col1:
+                name = st.text_input("Nome do evento *")
+                event_type = st.selectbox("Tipo", ["conference", "webinar", "workshop", "networking", "forum"])
+                industry = st.selectbox("Indústria", ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands", "geral"])
+            with col2:
+                start_date = st.date_input("Data início")
+                end_date = st.date_input("Data fim")
+                location = st.text_input("Local")
+                is_virtual = st.checkbox("Evento virtual")
+            description = st.text_area("Descrição")
+            submitted = st.form_submit_button("Salvar")
+            if submitted and name:
+                cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO events (name, description, event_type, industry, start_date, end_date, location, is_virtual)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (name, description, event_type, industry, start_date, end_date, location, is_virtual))
+                conn.commit()
+                st.success("Evento adicionado!")
+                st.rerun()
+
+    # Filtros
+    with st.expander("🔍 Filtrar Eventos"):
+        col1, col2 = st.columns(2)
+        with col1:
+            filter_type = st.multiselect("Tipo", ["conference", "webinar", "workshop", "networking", "forum"])
+            filter_industry = st.multiselect("Indústria", ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands", "geral"])
+        with col2:
+            show_past = st.checkbox("Mostrar eventos passados", value=False)
+            show_virtual = st.checkbox("Mostrar apenas virtuais", value=False)
+
+    events = get_events()
     
-    today = datetime.now().date()
-    
-    # Se for string, converter para date
-    if isinstance(date_value, str):
-        try:
-            date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
-        except (ValueError, TypeError):
-            return None
-    # Se for Timestamp do pandas
-    elif hasattr(date_value, 'date'):
-        date_value = date_value.date()
-    # Se já for date, manter
-    
-    if not isinstance(date_value, date):
-        return None
+    # Aplicar filtros de forma segura
+    if not events.empty:
+        events_filtered = events.copy()
         
-    delta = date_value - today
-    return delta.days
+        if 'start_date' in events_filtered.columns:
+            events_filtered['start_date_dt'] = pd.to_datetime(events_filtered['start_date'], errors='coerce')
+            today = pd.Timestamp.now().normalize()
+            
+            if not show_past:
+                events_filtered = events_filtered[events_filtered['start_date_dt'] >= today]
+        
+        if show_virtual and 'is_virtual' in events_filtered.columns:
+            events_filtered = events_filtered[events_filtered['is_virtual'] == True]
+        
+        if filter_type and 'event_type' in events_filtered.columns:
+            events_filtered = events_filtered[events_filtered['event_type'].isin(filter_type)]
+        
+        if filter_industry and 'industry' in events_filtered.columns:
+            events_filtered = events_filtered[events_filtered['industry'].isin(filter_industry)]
+    else:
+        events_filtered = events
+
+    if events_filtered.empty:
+        st.info("Nenhum evento encontrado com os filtros selecionados.")
+    else:
+        for _, row in events_filtered.iterrows():
+            days = days_until(row['start_date']) if pd.notna(row['start_date']) else None
+            countdown_html = format_countdown(days) if days is not None else ""
+            
+            st.markdown(f"""
+            <div class="card">
+                <h4>{row['name']}</h4>
+                <p><strong>Tipo:</strong> {row['event_type']} | <strong>Indústria:</strong> {row['industry']}</p>
+                <p><strong>Data:</strong> {row['start_date']} a {row['end_date']} | {countdown_html}</p>
+                <p><strong>Local:</strong> {row['location'] or 'N/A'} {'(Virtual)' if row['is_virtual'] else ''}</p>
+                <p>{row['description']}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 # ================================
-# KNOWLEDGE BASE MELHORADA (com buscadores)
+# KNOWLEDGE BASE
 # ================================
-if menu == "📚 Knowledge Base":
+elif menu == "📚 Knowledge Base":
     st.header("📚 Knowledge Base")
 
     tab1, tab2, tab3 = st.tabs(["📄 Whitepapers", "📖 Glossário", "📊 Case Studies"])
@@ -468,7 +566,6 @@ if menu == "📚 Knowledge Base":
     with tab1:
         st.subheader("Whitepapers")
         
-        # Buscador de whitepapers
         with st.expander("🔍 Buscar Whitepapers", expanded=False):
             search_term = st.text_input("Pesquisar por título, tópico ou autor", key="search_wp")
         
@@ -490,7 +587,6 @@ if menu == "📚 Knowledge Base":
         
         wps = get_whitepapers()
         if not wps.empty:
-            # Aplicar busca
             if search_term:
                 wps = wps[
                     wps['title'].str.contains(search_term, case=False, na=False) |
@@ -514,7 +610,6 @@ if menu == "📚 Knowledge Base":
     with tab2:
         st.subheader("Glossário")
         
-        # Buscador do glossário
         col1, col2 = st.columns([3, 1])
         with col1:
             search_term = st.text_input("🔍 Pesquisar termo ou definição", key="search_glossary")
@@ -537,7 +632,6 @@ if menu == "📚 Knowledge Base":
         
         glossary = get_glossary()
         if not glossary.empty:
-            # Aplicar filtros
             if search_term:
                 glossary = glossary[
                     glossary['term'].str.contains(search_term, case=False, na=False) |
@@ -561,7 +655,6 @@ if menu == "📚 Knowledge Base":
     with tab3:
         st.subheader("Case Studies")
         
-        # Buscador de cases
         with st.expander("🔍 Buscar Cases", expanded=False):
             search_case = st.text_input("Pesquisar por título ou descrição", key="search_case")
         
@@ -585,13 +678,11 @@ if menu == "📚 Knowledge Base":
                     st.success("Case study adicionado!")
                     st.rerun()
         
-        # Buscar cases do banco
         cases = get_cases()
         
         if cases.empty:
             st.info("Nenhum case study cadastrado. Use o formulário acima para adicionar o primeiro case!")
             
-            # Exemplo de case para demonstração (opcional)
             with st.expander("📋 Ver exemplo de Case Study"):
                 st.markdown("""
                 **Título:** Otimização de Supply Chain com IA na Indústria ABC
@@ -603,7 +694,6 @@ if menu == "📚 Knowledge Base":
                 **Resultados:** Redução de custos, aumento de eficiência.
                 """)
         else:
-            # Aplicar busca
             if search_case:
                 cases = cases[
                     cases['title'].str.contains(search_case, case=False, na=False) |
@@ -624,12 +714,11 @@ if menu == "📚 Knowledge Base":
                 """, unsafe_allow_html=True)
 
 # ================================
-# EMPRESAS TARGET (com buscador)
+# EMPRESAS TARGET
 # ================================
-if menu == "🏢 Empresas Target":
+elif menu == "🏢 Empresas Target":
     st.header("🏢 Empresas Target")
 
-    # Buscador de empresas
     col1, col2 = st.columns([3, 1])
     with col1:
         search_term = st.text_input("🔍 Buscar por nome, indústria ou contato", key="search_companies")
@@ -665,7 +754,6 @@ if menu == "🏢 Empresas Target":
     if companies.empty:
         st.info("Nenhuma empresa target cadastrada.")
     else:
-        # Aplicar filtros
         if search_term:
             companies = companies[
                 companies['name'].str.contains(search_term, case=False, na=False) |
@@ -688,12 +776,11 @@ if menu == "🏢 Empresas Target":
             """, unsafe_allow_html=True)
 
 # ================================
-# SENIOR ADVISORS (com buscador)
+# SENIOR ADVISORS
 # ================================
-if menu == "👥 Senior Advisors":
+elif menu == "👥 Senior Advisors":
     st.header("👥 Senior Advisors")
 
-    # Buscador de advisors
     search_term = st.text_input("🔍 Buscar por nome, expertise, empresa ou tópicos", key="search_advisors")
 
     with st.expander("➕ Novo Advisor"):
@@ -722,7 +809,6 @@ if menu == "👥 Senior Advisors":
     if advisors.empty:
         st.info("Nenhum advisor cadastrado.")
     else:
-        # Aplicar busca
         if search_term:
             advisors = advisors[
                 advisors['name'].str.contains(search_term, case=False, na=False) |
@@ -746,4 +832,4 @@ if menu == "👥 Senior Advisors":
 
 # Rodapé
 st.markdown("---")
-st.caption("TaskSync - Operações | Desenvolvido com Streamlit | - Raíssa Azevedo - 2026")
+st.caption("TaskSync - Operações | Desenvolvido com Streamlit | Raíssa Azevedo - 2026")
