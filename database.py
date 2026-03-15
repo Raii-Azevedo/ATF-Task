@@ -1,16 +1,32 @@
 import os
 import psycopg2
-from psycopg2.extras import RealDictCursor
-from datetime import date
+from psycopg2 import pool
+import streamlit as st
+
+# Connection pool for better performance
+_connection_pool = None
+
+def get_connection_pool():
+    """Get or create a connection pool (singleton pattern)"""
+    global _connection_pool
+    if _connection_pool is None:
+        _connection_pool = psycopg2.pool.SimpleConnectionPool(
+            1,  # minconn
+            10,  # maxconn
+            os.environ["DATABASE_URL"]
+        )
+    return _connection_pool
 
 def get_connection():
-    """Retorna uma conexão com o PostgreSQL usando a URL do ambiente (Railway)."""
-    database_url = os.environ.get("DATABASE_URL")
-    if not database_url:
-        # Fallback para desenvolvimento local (ajuste conforme necessário)
-        database_url = "postgresql://postgres:postgres@localhost:5432/tasksync"
-    conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
-    return conn
+    """Get a connection from the pool"""
+    pool = get_connection_pool()
+    return pool.getconn()
+
+def return_connection(conn):
+    """Return a connection to the pool"""
+    pool = get_connection_pool()
+    pool.putconn(conn)
+
 
 def init_db():
     """Cria as tabelas e insere dados iniciais se necessário."""
