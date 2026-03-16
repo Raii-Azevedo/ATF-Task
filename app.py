@@ -402,11 +402,12 @@ if menu == "📊 Dashboard":
             st.switch_page("app.py?menu=📅 Eventos")  # Isso vai mudar para a página de eventos
 
 # ================================
-# KANBAN
+# KANBAN COM EDIÇÃO E EXCLUSÃO
 # ================================
 elif menu == "📋 Kanban":
     st.header("📋 Kanban - Iniciativas")
 
+    # Formulário para nova tarefa (mesmo código)
     with st.expander("➕ Nova Iniciativa"):
         with st.form("new_task"):
             col1, col2 = st.columns(2)
@@ -420,7 +421,6 @@ elif menu == "📋 Kanban":
                 due_date = st.date_input("Data limite", value=None)
                 target_companies = st.text_input("Empresas alvo (separadas por vírgula)")
                 document_link = st.text_input("Link documento")
-
             description = st.text_area("Descrição")
             submitted = st.form_submit_button("Salvar")
             if submitted and title:
@@ -438,6 +438,8 @@ elif menu == "📋 Kanban":
         st.info("Nenhuma tarefa cadastrada.")
     else:
         col1, col2, col3 = st.columns(3)
+        
+        # COLUNA TO DO
         with col1:
             st.markdown("### 📝 To Do")
             todo_tasks = tasks[tasks['status'] == 'To Do']
@@ -445,18 +447,80 @@ elif menu == "📋 Kanban":
                 priority_class = "priority-high" if row['priority'] == 'Alta' else "priority-medium" if row['priority'] == 'Média' else "priority-low"
                 days = days_until(row['due_date']) if row['due_date'] else None
                 countdown_html = format_countdown(days) if days is not None else ""
+                
+                # Card da tarefa
                 st.markdown(f"""
-                <div class="card">
+                <div class="card" id="task_{row['id']}">
                     <h4>{row['title']}</h4>
                     <p><span class="{priority_class}">{row['priority']}</span> | {row['category']} | {row['subcategory']}</p>
                     <p><strong>Resp:</strong> {row['owner_name'] or 'N/A'} | <strong>Data:</strong> {row['due_date'] or 'N/A'} {countdown_html}</p>
+                    <p><small>{row['description'][:100]}...</small></p>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("→ Iniciar", key=f"start_{row['id']}"):
-                    cur = conn.cursor()
-                    cur.execute("UPDATE tasks SET status='In Progress' WHERE id=%s", (row['id'],))
-                    conn.commit()
-                    st.rerun()
+                
+                # Botões de ação
+                col_a, col_b, col_c, col_d = st.columns([2, 1, 1, 1])
+                with col_a:
+                    if st.button("→ Iniciar", key=f"start_{row['id']}"):
+                        cur = conn.cursor()
+                        cur.execute("UPDATE tasks SET status='In Progress' WHERE id=%s", (row['id'],))
+                        conn.commit()
+                        st.rerun()
+                with col_b:
+                    if st.button("✏️", key=f"edit_{row['id']}"):
+                        st.session_state[f"editing_{row['id']}"] = True
+                with col_c:
+                    if st.button("🗑️", key=f"delete_{row['id']}"):
+                        cur = conn.cursor()
+                        cur.execute("DELETE FROM tasks WHERE id=%s", (row['id'],))
+                        conn.commit()
+                        st.success("Tarefa excluída!")
+                        st.rerun()
+                with col_d:
+                    if st.button("📋", key=f"details_{row['id']}"):
+                        st.session_state[f"details_{row['id']}"] = not st.session_state.get(f"details_{row['id']}", False)
+                
+                # Modal de edição
+                if st.session_state.get(f"editing_{row['id']}", False):
+                    with st.form(f"edit_form_{row['id']}"):
+                        st.markdown("**✏️ Editando tarefa**")
+                        new_title = st.text_input("Título", value=row['title'])
+                        new_category = st.selectbox("Categoria", ["challenge", "next_step", "tool", "whitepaper", "initiative"], 
+                                                   index=["challenge", "next_step", "tool", "whitepaper", "initiative"].index(row['category']) if row['category'] in ["challenge", "next_step", "tool", "whitepaper", "initiative"] else 0)
+                        new_priority = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"],
+                                                   index=["Alta", "Média", "Baixa"].index(row['priority']) if row['priority'] in ["Alta", "Média", "Baixa"] else 0)
+                        new_owner = st.text_input("Responsável", value=row['owner_name'] or "")
+                        new_description = st.text_area("Descrição", value=row['description'] or "")
+                        
+                        col_save, col_cancel = st.columns(2)
+                        with col_save:
+                            if st.form_submit_button("💾 Salvar"):
+                                cur = conn.cursor()
+                                cur.execute("""
+                                    UPDATE tasks 
+                                    SET title=%s, category=%s, priority=%s, owner_name=%s, description=%s
+                                    WHERE id=%s
+                                """, (new_title, new_category, new_priority, new_owner, new_description, row['id']))
+                                conn.commit()
+                                st.session_state[f"editing_{row['id']}"] = False
+                                st.success("Atualizado!")
+                                st.rerun()
+                        with col_cancel:
+                            if st.form_submit_button("❌ Cancelar"):
+                                st.session_state[f"editing_{row['id']}"] = False
+                                st.rerun()
+                
+                # Detalhes expandidos
+                if st.session_state.get(f"details_{row['id']}", False):
+                    st.markdown(f"""
+                    <div style="background-color: #F5F5F5; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+                        <p><strong>Descrição completa:</strong> {row['description'] or 'Sem descrição'}</p>
+                        <p><strong>Empresas alvo:</strong> {row['target_companies'] or 'N/A'}</p>
+                        <p><strong>Link:</strong> {row['document_link'] or 'N/A'}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        # COLUNA IN PROGRESS (similar, com botões)
         with col2:
             st.markdown("### 🔄 In Progress")
             ip_tasks = tasks[tasks['status'] == 'In Progress']
@@ -464,6 +528,7 @@ elif menu == "📋 Kanban":
                 priority_class = "priority-high" if row['priority'] == 'Alta' else "priority-medium" if row['priority'] == 'Média' else "priority-low"
                 days = days_until(row['due_date']) if row['due_date'] else None
                 countdown_html = format_countdown(days) if days is not None else ""
+                
                 st.markdown(f"""
                 <div class="card">
                     <h4>{row['title']}</h4>
@@ -471,11 +536,29 @@ elif menu == "📋 Kanban":
                     <p><strong>Resp:</strong> {row['owner_name'] or 'N/A'} | <strong>Data:</strong> {row['due_date'] or 'N/A'} {countdown_html}</p>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("✅ Concluir", key=f"done_{row['id']}"):
-                    cur = conn.cursor()
-                    cur.execute("UPDATE tasks SET status='Done', completed_date=%s WHERE id=%s", (date.today(), row['id']))
-                    conn.commit()
-                    st.rerun()
+                
+                col_a, col_b, col_c = st.columns([2, 1, 1])
+                with col_a:
+                    if st.button("✅ Concluir", key=f"done_{row['id']}"):
+                        cur = conn.cursor()
+                        cur.execute("UPDATE tasks SET status='Done', completed_date=%s WHERE id=%s", (date.today(), row['id']))
+                        conn.commit()
+                        st.rerun()
+                with col_b:
+                    if st.button("← Voltar", key=f"back_{row['id']}"):
+                        cur = conn.cursor()
+                        cur.execute("UPDATE tasks SET status='To Do' WHERE id=%s", (row['id'],))
+                        conn.commit()
+                        st.rerun()
+                with col_c:
+                    if st.button("🗑️", key=f"delete_ip_{row['id']}"):
+                        cur = conn.cursor()
+                        cur.execute("DELETE FROM tasks WHERE id=%s", (row['id'],))
+                        conn.commit()
+                        st.success("Tarefa excluída!")
+                        st.rerun()
+        
+        # COLUNA DONE
         with col3:
             st.markdown("### ✅ Done")
             done_tasks = tasks[tasks['status'] == 'Done']
@@ -486,12 +569,23 @@ elif menu == "📋 Kanban":
                     <p>Concluído em: {row['completed_date'] or 'N/A'}</p>
                 </div>
                 """, unsafe_allow_html=True)
+                
+                if st.button("🗑️ Excluir", key=f"delete_done_{row['id']}"):
+                    cur = conn.cursor()
+                    cur.execute("DELETE FROM tasks WHERE id=%s", (row['id'],))
+                    conn.commit()
+                    st.success("Tarefa excluída!")
+                    st.rerun()
 
 # ================================
-# EVENTOS - CORRIGIDO E REINSERIDO
+# EVENTOS COM EDIÇÃO E EXCLUSÃO
 # ================================
 elif menu == "📅 Eventos":
     st.header("📅 Eventos do Setor")
+
+    # Inicializar session state para controle de edição
+    if 'editing_event' not in st.session_state:
+        st.session_state.editing_event = None
 
     with st.expander("➕ Novo Evento"):
         with st.form("new_event"):
@@ -529,7 +623,7 @@ elif menu == "📅 Eventos":
 
     events = get_events()
     
-    # Aplicar filtros de forma segura
+    # Aplicar filtros
     if not events.empty:
         events_filtered = events.copy()
         
@@ -558,24 +652,78 @@ elif menu == "📅 Eventos":
             days = days_until(row['start_date']) if pd.notna(row['start_date']) else None
             countdown_html = format_countdown(days) if days is not None else ""
             
-            st.markdown(f"""
-            <div class="card">
-                <h4>{row['name']}</h4>
-                <p><strong>Tipo:</strong> {row['event_type']} | <strong>Indústria:</strong> {row['industry']}</p>
-                <p><strong>Data:</strong> {row['start_date']} a {row['end_date']} | {countdown_html}</p>
-                <p><strong>Local:</strong> {row['location'] or 'N/A'} {'(Virtual)' if row['is_virtual'] else ''}</p>
-                <p>{row['description']}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            col1, col2, col3 = st.columns([8, 1, 1])
+            
+            with col1:
+                st.markdown(f"""
+                <div class="card">
+                    <h4>{row['name']}</h4>
+                    <p><strong>Tipo:</strong> {row['event_type']} | <strong>Indústria:</strong> {row['industry']}</p>
+                    <p><strong>Data:</strong> {row['start_date']} a {row['end_date']} | {countdown_html}</p>
+                    <p><strong>Local:</strong> {row['location'] or 'N/A'} {'(Virtual)' if row['is_virtual'] else ''}</p>
+                    <p>{row['description']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                if st.button("✏️", key=f"edit_event_{row['id']}"):
+                    st.session_state.editing_event = row['id']
+            
+            with col3:
+                if st.button("🗑️", key=f"delete_event_{row['id']}"):
+                    cur = conn.cursor()
+                    cur.execute("DELETE FROM events WHERE id=%s", (row['id'],))
+                    conn.commit()
+                    st.success("Evento excluído!")
+                    st.rerun()
+            
+            # Formulário de edição
+            if st.session_state.editing_event == row['id']:
+                with st.form(f"edit_event_form_{row['id']}"):
+                    st.markdown("**✏️ Editando evento**")
+                    new_name = st.text_input("Nome", value=row['name'])
+                    new_type = st.selectbox("Tipo", ["conference", "webinar", "workshop", "networking", "forum"],
+                                          index=["conference", "webinar", "workshop", "networking", "forum"].index(row['event_type']) if row['event_type'] in ["conference", "webinar", "workshop", "networking", "forum"] else 0)
+                    new_industry = st.selectbox("Indústria", ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands", "geral"],
+                                              index=["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands", "geral"].index(row['industry']) if row['industry'] in ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands", "geral"] else 0)
+                    new_location = st.text_input("Local", value=row['location'] or "")
+                    new_description = st.text_area("Descrição", value=row['description'] or "")
+                    
+                    col_save, col_cancel = st.columns(2)
+                    with col_save:
+                        if st.form_submit_button("💾 Salvar"):
+                            cur = conn.cursor()
+                            cur.execute("""
+                                UPDATE events 
+                                SET name=%s, event_type=%s, industry=%s, location=%s, description=%s
+                                WHERE id=%s
+                            """, (new_name, new_type, new_industry, new_location, new_description, row['id']))
+                            conn.commit()
+                            st.session_state.editing_event = None
+                            st.success("Evento atualizado!")
+                            st.rerun()
+                    with col_cancel:
+                        if st.form_submit_button("❌ Cancelar"):
+                            st.session_state.editing_event = None
+                            st.rerun()
 
 # ================================
-# KNOWLEDGE BASE
+# KNOWLEDGE BASE COM EDIÇÃO E EXCLUSÃO
 # ================================
 elif menu == "📚 Knowledge Base":
     st.header("📚 Knowledge Base")
 
+    # Inicializar session state para controle de edição
+    if 'editing_wp' not in st.session_state:
+        st.session_state.editing_wp = None
+    if 'editing_term' not in st.session_state:
+        st.session_state.editing_term = None
+    if 'editing_case' not in st.session_state:
+        st.session_state.editing_case = None
+
     tab1, tab2, tab3 = st.tabs(["📄 Whitepapers", "📖 Glossário", "📊 Case Studies"])
 
+    # ===== TAB 1: WHITEPAPERS =====
     with tab1:
         st.subheader("Whitepapers")
         
@@ -608,18 +756,65 @@ elif menu == "📚 Knowledge Base":
                 ]
             
             st.write(f"**{len(wps)} whitepapers encontrados**")
+            
             for _, row in wps.iterrows():
-                st.markdown(f"""
-                <div class="card">
-                    <h4>{row['title']}</h4>
-                    <p><strong>Tópico:</strong> {row['topic']} | <strong>Autor:</strong> {row['author_name']} | <strong>Status:</strong> {row['status']}</p>
-                    <p>{row['content'][:200]}...</p>
-                    <p><a href="{row['document_link']}" target="_blank">🔗 Link para documento</a></p>
-                </div>
-                """, unsafe_allow_html=True)
+                col1, col2, col3 = st.columns([8, 1, 1])
+                
+                with col1:
+                    st.markdown(f"""
+                    <div class="card">
+                        <h4>{row['title']}</h4>
+                        <p><strong>Tópico:</strong> {row['topic']} | <strong>Autor:</strong> {row['author_name']} | <strong>Status:</strong> {row['status']}</p>
+                        <p>{row['content'][:200]}...</p>
+                        <p><a href="{row['document_link']}" target="_blank">🔗 Link para documento</a></p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    if st.button("✏️", key=f"edit_wp_{row['id']}"):
+                        st.session_state.editing_wp = row['id']
+                
+                with col3:
+                    if st.button("🗑️", key=f"delete_wp_{row['id']}"):
+                        cur = conn.cursor()
+                        cur.execute("DELETE FROM whitepapers WHERE id=%s", (row['id'],))
+                        conn.commit()
+                        st.success("Whitepaper excluído!")
+                        st.rerun()
+                
+                # Formulário de edição
+                if st.session_state.editing_wp == row['id']:
+                    with st.form(f"edit_wp_form_{row['id']}"):
+                        st.markdown("**✏️ Editando whitepaper**")
+                        new_title = st.text_input("Título", value=row['title'])
+                        new_topic = st.text_input("Tópico", value=row['topic'] or "")
+                        new_author = st.text_input("Autor", value=row['author_name'] or "")
+                        new_status = st.selectbox("Status", ["draft", "review", "published"],
+                                                index=["draft", "review", "published"].index(row['status']) if row['status'] in ["draft", "review", "published"] else 0)
+                        new_link = st.text_input("Link", value=row['document_link'] or "")
+                        new_content = st.text_area("Conteúdo", value=row['content'] or "")
+                        
+                        col_save, col_cancel = st.columns(2)
+                        with col_save:
+                            if st.form_submit_button("💾 Salvar"):
+                                cur = conn.cursor()
+                                cur.execute("""
+                                    UPDATE whitepapers 
+                                    SET title=%s, topic=%s, author_name=%s, status=%s, document_link=%s, content=%s
+                                    WHERE id=%s
+                                """, (new_title, new_topic, new_author, new_status, new_link, new_content, row['id']))
+                                conn.commit()
+                                st.session_state.editing_wp = None
+                                st.success("Whitepaper atualizado!")
+                                st.rerun()
+                        with col_cancel:
+                            if st.form_submit_button("❌ Cancelar"):
+                                st.session_state.editing_wp = None
+                                st.rerun()
         else:
             st.info("Nenhum whitepaper cadastrado.")
 
+    # ===== TAB 2: GLOSSÁRIO =====
     with tab2:
         st.subheader("Glossário")
         
@@ -645,6 +840,7 @@ elif menu == "📚 Knowledge Base":
         
         glossary = get_glossary()
         if not glossary.empty:
+            # Aplicar filtros
             if search_term:
                 glossary = glossary[
                     glossary['term'].str.contains(search_term, case=False, na=False) |
@@ -654,17 +850,62 @@ elif menu == "📚 Knowledge Base":
                 glossary = glossary[glossary['category'] == filter_category]
             
             st.write(f"**{len(glossary)} termos encontrados**")
+            
             for _, row in glossary.iterrows():
-                st.markdown(f"""
-                <div class="card">
-                    <h4>{row['term']}</h4>
-                    <p><em>{row['definition']}</em></p>
-                    <p><strong>Categoria:</strong> {row['category']} | <strong>Exemplo:</strong> {row['example'] or 'N/A'}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                col1, col2, col3 = st.columns([8, 1, 1])
+                
+                with col1:
+                    st.markdown(f"""
+                    <div class="card">
+                        <h4>{row['term']}</h4>
+                        <p><em>{row['definition']}</em></p>
+                        <p><strong>Categoria:</strong> {row['category']} | <strong>Exemplo:</strong> {row['example'] or 'N/A'}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    if st.button("✏️", key=f"edit_term_{row['id']}"):
+                        st.session_state.editing_term = row['id']
+                
+                with col3:
+                    if st.button("🗑️", key=f"delete_term_{row['id']}"):
+                        cur = conn.cursor()
+                        cur.execute("DELETE FROM glossary WHERE id=%s", (row['id'],))
+                        conn.commit()
+                        st.success("Termo excluído!")
+                        st.rerun()
+                
+                # Formulário de edição
+                if st.session_state.editing_term == row['id']:
+                    with st.form(f"edit_term_form_{row['id']}"):
+                        st.markdown("**✏️ Editando termo**")
+                        new_term = st.text_input("Termo", value=row['term'])
+                        new_definition = st.text_area("Definição", value=row['definition'])
+                        new_category = st.selectbox("Categoria", ["technical", "business", "acronym"],
+                                                  index=["technical", "business", "acronym"].index(row['category']) if row['category'] in ["technical", "business", "acronym"] else 0)
+                        new_example = st.text_input("Exemplo", value=row['example'] or "")
+                        
+                        col_save, col_cancel = st.columns(2)
+                        with col_save:
+                            if st.form_submit_button("💾 Salvar"):
+                                cur = conn.cursor()
+                                cur.execute("""
+                                    UPDATE glossary 
+                                    SET term=%s, definition=%s, category=%s, example=%s
+                                    WHERE id=%s
+                                """, (new_term, new_definition, new_category, new_example, row['id']))
+                                conn.commit()
+                                st.session_state.editing_term = None
+                                st.success("Termo atualizado!")
+                                st.rerun()
+                        with col_cancel:
+                            if st.form_submit_button("❌ Cancelar"):
+                                st.session_state.editing_term = None
+                                st.rerun()
         else:
             st.info("Nenhum termo cadastrado no glossário.")
 
+    # ===== TAB 3: CASE STUDIES =====
     with tab3:
         st.subheader("Case Studies")
         
@@ -715,23 +956,74 @@ elif menu == "📚 Knowledge Base":
                 ]
             
             st.write(f"**{len(cases)} cases encontrados**")
+            
             for _, row in cases.iterrows():
-                st.markdown(f"""
-                <div class="card">
-                    <h4>{row['title']}</h4>
-                    <p><strong>Categoria:</strong> {row['category']} | <strong>Autor:</strong> {row['author'] or 'N/A'}</p>
-                    <p><strong>Resumo:</strong> {row['summary']}</p>
-                    <p><strong>Tags:</strong> {row['tags'] or 'N/A'}</p>
-                    {f'<p><a href="{row["document_link"]}" target="_blank">🔗 Link para documento</a></p>' if row['document_link'] else ''}
-                </div>
-                """, unsafe_allow_html=True)
+                col1, col2, col3 = st.columns([8, 1, 1])
+                
+                with col1:
+                    st.markdown(f"""
+                    <div class="card">
+                        <h4>{row['title']}</h4>
+                        <p><strong>Categoria:</strong> {row['category']} | <strong>Autor:</strong> {row['author'] or 'N/A'}</p>
+                        <p><strong>Resumo:</strong> {row['summary']}</p>
+                        <p><strong>Tags:</strong> {row['tags'] or 'N/A'}</p>
+                        {f'<p><a href="{row["document_link"]}" target="_blank">🔗 Link para documento</a></p>' if row['document_link'] else ''}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    if st.button("✏️", key=f"edit_case_{row['id']}"):
+                        st.session_state.editing_case = row['id']
+                
+                with col3:
+                    if st.button("🗑️", key=f"delete_case_{row['id']}"):
+                        cur = conn.cursor()
+                        cur.execute("DELETE FROM knowledge_base WHERE id=%s", (row['id'],))
+                        conn.commit()
+                        st.success("Case study excluído!")
+                        st.rerun()
+                
+                # Formulário de edição
+                if st.session_state.editing_case == row['id']:
+                    with st.form(f"edit_case_form_{row['id']}"):
+                        st.markdown("**✏️ Editando case study**")
+                        new_title = st.text_input("Título", value=row['title'])
+                        new_category = st.selectbox("Categoria", ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands"],
+                                                  index=["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands"].index(row['category']) if row['category'] in ["manufacturing", "supply_chain", "digital_twin", "ia_ml", "healthcare", "b2b", "brands"] else 0)
+                        new_summary = st.text_area("Resumo", value=row['summary'])
+                        new_content = st.text_area("Conteúdo", value=row['content'] or "")
+                        new_author = st.text_input("Autor", value=row['author'] or "")
+                        new_tags = st.text_input("Tags", value=row['tags'] or "")
+                        new_link = st.text_input("Link", value=row['document_link'] or "")
+                        
+                        col_save, col_cancel = st.columns(2)
+                        with col_save:
+                            if st.form_submit_button("💾 Salvar"):
+                                cur = conn.cursor()
+                                cur.execute("""
+                                    UPDATE knowledge_base 
+                                    SET title=%s, category=%s, summary=%s, content=%s, author=%s, tags=%s, document_link=%s
+                                    WHERE id=%s
+                                """, (new_title, new_category, new_summary, new_content, new_author, new_tags, new_link, row['id']))
+                                conn.commit()
+                                st.session_state.editing_case = None
+                                st.success("Case study atualizado!")
+                                st.rerun()
+                        with col_cancel:
+                            if st.form_submit_button("❌ Cancelar"):
+                                st.session_state.editing_case = None
+                                st.rerun()
 
 # ================================
-# EMPRESAS TARGET
+# EMPRESAS TARGET COM EDIÇÃO E EXCLUSÃO
 # ================================
 elif menu == "🏢 Empresas Target":
     st.header("🏢 Empresas Target")
 
+    if 'editing_company' not in st.session_state:
+        st.session_state.editing_company = None
+
+    # Buscador
     col1, col2 = st.columns([3, 1])
     with col1:
         search_term = st.text_input("🔍 Buscar por nome, indústria ou contato", key="search_companies")
@@ -767,6 +1059,7 @@ elif menu == "🏢 Empresas Target":
     if companies.empty:
         st.info("Nenhuma empresa target cadastrada.")
     else:
+        # Aplicar filtros
         if search_term:
             companies = companies[
                 companies['name'].str.contains(search_term, case=False, na=False) |
@@ -777,22 +1070,71 @@ elif menu == "🏢 Empresas Target":
             companies = companies[companies['status'] == filter_status]
         
         st.write(f"**{len(companies)} empresas encontradas**")
+        
         for _, row in companies.iterrows():
-            st.markdown(f"""
-            <div class="card">
-                <h4>{row['name']}</h4>
-                <p><strong>Indústria:</strong> {row['industry']} | <strong>Porte:</strong> {row['size']} | <strong>Status:</strong> {row['status']}</p>
-                <p><strong>Contato:</strong> {row['contact_person'] or 'N/A'} | {row['contact_email'] or 'N/A'} | {row['contact_phone'] or 'N/A'}</p>
-                <p><strong>Valor potencial:</strong> {row['potential_value'] or 'N/A'}</p>
-                <p><em>{row['notes']}</em></p>
-            </div>
-            """, unsafe_allow_html=True)
-
+            col1, col2, col3 = st.columns([8, 1, 1])
+            
+            with col1:
+                st.markdown(f"""
+                <div class="card">
+                    <h4>{row['name']}</h4>
+                    <p><strong>Indústria:</strong> {row['industry']} | <strong>Porte:</strong> {row['size']} | <strong>Status:</strong> {row['status']}</p>
+                    <p><strong>Contato:</strong> {row['contact_person'] or 'N/A'} | {row['contact_email'] or 'N/A'} | {row['contact_phone'] or 'N/A'}</p>
+                    <p><strong>Valor potencial:</strong> {row['potential_value'] or 'N/A'}</p>
+                    <p><em>{row['notes']}</em></p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                if st.button("✏️", key=f"edit_company_{row['id']}"):
+                    st.session_state.editing_company = row['id']
+            
+            with col3:
+                if st.button("🗑️", key=f"delete_company_{row['id']}"):
+                    cur = conn.cursor()
+                    cur.execute("DELETE FROM target_companies WHERE id=%s", (row['id'],))
+                    conn.commit()
+                    st.success("Empresa excluída!")
+                    st.rerun()
+            
+            # Formulário de edição
+            if st.session_state.editing_company == row['id']:
+                with st.form(f"edit_company_form_{row['id']}"):
+                    st.markdown("**✏️ Editando empresa**")
+                    new_name = st.text_input("Nome", value=row['name'])
+                    new_industry = st.selectbox("Indústria", ["manufacturing", "healthcare", "b2b", "brands", "supply_chain", "tech"],
+                                              index=["manufacturing", "healthcare", "b2b", "brands", "supply_chain", "tech"].index(row['industry']) if row['industry'] in ["manufacturing", "healthcare", "b2b", "brands", "supply_chain", "tech"] else 0)
+                    new_status = st.selectbox("Status", ["prospect", "contacted", "meeting", "proposal", "closed"],
+                                            index=["prospect", "contacted", "meeting", "proposal", "closed"].index(row['status']) if row['status'] in ["prospect", "contacted", "meeting", "proposal", "closed"] else 0)
+                    new_contact = st.text_input("Contato", value=row['contact_person'] or "")
+                    new_email = st.text_input("Email", value=row['contact_email'] or "")
+                    new_notes = st.text_area("Observações", value=row['notes'] or "")
+                    
+                    col_save, col_cancel = st.columns(2)
+                    with col_save:
+                        if st.form_submit_button("💾 Salvar"):
+                            cur = conn.cursor()
+                            cur.execute("""
+                                UPDATE target_companies 
+                                SET name=%s, industry=%s, status=%s, contact_person=%s, contact_email=%s, notes=%s
+                                WHERE id=%s
+                            """, (new_name, new_industry, new_status, new_contact, new_email, new_notes, row['id']))
+                            conn.commit()
+                            st.session_state.editing_company = None
+                            st.success("Empresa atualizada!")
+                            st.rerun()
+                    with col_cancel:
+                        if st.form_submit_button("❌ Cancelar"):
+                            st.session_state.editing_company = None
+                            st.rerun()
 # ================================
-# SENIOR ADVISORS
+# SENIOR ADVISORS COM EDIÇÃO E EXCLUSÃO
 # ================================
 elif menu == "👥 Senior Advisors":
     st.header("👥 Senior Advisors")
+
+    if 'editing_advisor' not in st.session_state:
+        st.session_state.editing_advisor = None
 
     search_term = st.text_input("🔍 Buscar por nome, expertise, empresa ou tópicos", key="search_advisors")
 
@@ -831,18 +1173,62 @@ elif menu == "👥 Senior Advisors":
             ]
         
         st.write(f"**{len(advisors)} advisors encontrados**")
+        
         for _, row in advisors.iterrows():
-            st.markdown(f"""
-            <div class="card">
-                <h4>{row['name']}</h4>
-                <p><strong>Expertise:</strong> {row['expertise']} | <strong>Empresa:</strong> {row['company'] or 'N/A'}</p>
-                <p><strong>Tópicos:</strong> {row['topics'] or 'N/A'}</p>
-                <p><strong>Eventos:</strong> {row['events_participated'] or 'N/A'}</p>
-                <p><strong>LinkedIn:</strong> <a href="{row['linkedin']}" target="_blank">{row['linkedin']}</a></p>
-                <p><em>{row['notes']}</em></p>
-            </div>
-            """, unsafe_allow_html=True)
-
+            col1, col2, col3 = st.columns([8, 1, 1])
+            
+            with col1:
+                st.markdown(f"""
+                <div class="card">
+                    <h4>{row['name']}</h4>
+                    <p><strong>Expertise:</strong> {row['expertise']} | <strong>Empresa:</strong> {row['company'] or 'N/A'}</p>
+                    <p><strong>Tópicos:</strong> {row['topics'] or 'N/A'}</p>
+                    <p><strong>Eventos:</strong> {row['events_participated'] or 'N/A'}</p>
+                    <p><strong>LinkedIn:</strong> <a href="{row['linkedin']}" target="_blank">{row['linkedin']}</a></p>
+                    <p><em>{row['notes']}</em></p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                if st.button("✏️", key=f"edit_advisor_{row['id']}"):
+                    st.session_state.editing_advisor = row['id']
+            
+            with col3:
+                if st.button("🗑️", key=f"delete_advisor_{row['id']}"):
+                    cur = conn.cursor()
+                    cur.execute("DELETE FROM senior_advisors WHERE id=%s", (row['id'],))
+                    conn.commit()
+                    st.success("Advisor excluído!")
+                    st.rerun()
+            
+            # Formulário de edição
+            if st.session_state.editing_advisor == row['id']:
+                with st.form(f"edit_advisor_form_{row['id']}"):
+                    st.markdown("**✏️ Editando advisor**")
+                    new_name = st.text_input("Nome", value=row['name'])
+                    new_expertise = st.text_input("Expertise", value=row['expertise'] or "")
+                    new_company = st.text_input("Empresa", value=row['company'] or "")
+                    new_topics = st.text_input("Tópicos", value=row['topics'] or "")
+                    new_linkedin = st.text_input("LinkedIn", value=row['linkedin'] or "")
+                    new_notes = st.text_area("Notas", value=row['notes'] or "")
+                    
+                    col_save, col_cancel = st.columns(2)
+                    with col_save:
+                        if st.form_submit_button("💾 Salvar"):
+                            cur = conn.cursor()
+                            cur.execute("""
+                                UPDATE senior_advisors 
+                                SET name=%s, expertise=%s, company=%s, topics=%s, linkedin=%s, notes=%s
+                                WHERE id=%s
+                            """, (new_name, new_expertise, new_company, new_topics, new_linkedin, new_notes, row['id']))
+                            conn.commit()
+                            st.session_state.editing_advisor = None
+                            st.success("Advisor atualizado!")
+                            st.rerun()
+                    with col_cancel:
+                        if st.form_submit_button("❌ Cancelar"):
+                            st.session_state.editing_advisor = None
+                            st.rerun()
 # Rodapé
 st.markdown("---")
 st.caption("TaskSync - Operações | Desenvolvido com Streamlit | Raíssa Azevedo - 2026")
