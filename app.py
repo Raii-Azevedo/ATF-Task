@@ -25,7 +25,7 @@ st.set_page_config(
 def init_session_state():
     """Initialize all session state variables"""
     defaults = {
-        "dark_mode": False,
+        "dark_mode": True,
         "notifications": [],
         "saved_filters": {},
         "comments": {},
