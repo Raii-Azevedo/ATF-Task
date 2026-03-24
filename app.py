@@ -725,12 +725,7 @@ def show_calendar_view(events_df):
 
 # ===== SIDEBAR =====
 with st.sidebar:
-    st.markdown("""
-<div style="display:flex; align-items:center; gap:12px;">
-    <img src="https://github.com/Raii-Azevedo/ATF-Task/blob/main/logo.png" width="40">
-    <h2 style="margin:0;">TaskSync</h2>
-</div>
-""", unsafe_allow_html=True)
+    st.markdown("## 🎯 TaskSync")
     st.markdown("Operations Strategy")
     st.markdown("---")
     
