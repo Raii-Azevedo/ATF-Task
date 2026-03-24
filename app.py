@@ -1,5 +1,5 @@
 import streamlit as st
-from database import get_connection, init_db
+from database import get_connection, init_db, migrate_database
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -40,13 +40,26 @@ def init_session_state():
 
 init_session_state()
 
-# ===== DATABASE INITIALIZATION =====
+# ===== DATABASE INITIALIZATION WITH MIGRATIONS =====
 @st.cache_resource
 def init_database():
+    """Initialize database and run migrations"""
+    print("🔄 Inicializando banco de dados...")
+    
+    # Criar tabelas se não existirem
     init_db()
+    
+    # Executar migrações para garantir que as colunas existem
+    try:
+        migrate_database()
+        print("✅ Migrações executadas com sucesso")
+    except Exception as e:
+        print(f"⚠️ Erro nas migrações: {e}")
+    
+    return get_connection()
 
-init_database()
-conn = get_connection()
+# Inicializar banco de dados
+conn = init_database()
 
 # ===== DARK MODE ONLY STYLES =====
 st.markdown("""
