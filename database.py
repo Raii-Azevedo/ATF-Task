@@ -79,7 +79,7 @@ def init_db():
     )
     """)
 
-    # WHITEPAPERS
+    # WHITEPAPERS - ADICIONADA COLUNA TAGS
     cur.execute("""
     CREATE TABLE IF NOT EXISTS whitepapers (
         id SERIAL PRIMARY KEY,
@@ -94,6 +94,7 @@ def init_db():
         document_link TEXT,
         published_date DATE,
         target_audience TEXT,
+        tags TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -198,6 +199,26 @@ def init_db():
     conn.commit()
 
     # ==============================
+    # MIGRATIONS PARA TABELAS EXISTENTES
+    # ==============================
+    
+    # Adicionar coluna tags na tabela whitepapers se não existir
+    try:
+        cur.execute("ALTER TABLE whitepapers ADD COLUMN IF NOT EXISTS tags TEXT")
+        conn.commit()
+        print("✅ Coluna 'tags' adicionada à tabela whitepapers")
+    except Exception as e:
+        print(f"⚠️ Coluna 'tags' já existe ou erro: {e}")
+    
+    # Adicionar coluna description na tabela whitepapers se não existir
+    try:
+        cur.execute("ALTER TABLE whitepapers ADD COLUMN IF NOT EXISTS description TEXT")
+        conn.commit()
+        print("✅ Coluna 'description' adicionada à tabela whitepapers")
+    except Exception as e:
+        print(f"⚠️ Coluna 'description' já existe ou erro: {e}")
+
+    # ==============================
     # INITIAL DATA
     # ==============================
 
@@ -262,8 +283,29 @@ def init_db():
 
 def migrate_database():
     """Future migrations"""
-    pass
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    # Adicionar coluna tags na tabela whitepapers se não existir
+    try:
+        cur.execute("ALTER TABLE whitepapers ADD COLUMN IF NOT EXISTS tags TEXT")
+        conn.commit()
+        print("✅ Migração: coluna 'tags' adicionada")
+    except Exception as e:
+        print(f"⚠️ Migração tags: {e}")
+    
+    # Adicionar coluna description na tabela whitepapers se não existir
+    try:
+        cur.execute("ALTER TABLE whitepapers ADD COLUMN IF NOT EXISTS description TEXT")
+        conn.commit()
+        print("✅ Migração: coluna 'description' adicionada")
+    except Exception as e:
+        print(f"⚠️ Migração description: {e}")
+    
+    cur.close()
+    conn.close()
 
 
 if __name__ == "__main__":
     init_db()
+    migrate_database()
