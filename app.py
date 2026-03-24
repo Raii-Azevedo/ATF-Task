@@ -31,7 +31,8 @@ def init_session_state():
         "comments": {},
         "user_name": "Usuário",
         "user_email": None,
-        "user_role": "viewer"
+        "user_role": "viewer",
+        "show_new_wp_form": False
     }
     
     for key, value in defaults.items():
@@ -54,12 +55,9 @@ def get_enhanced_styles(dark_mode=False):
     if dark_mode:
         return """
         <style>
-        /* Dark Mode Base */
         .stApp {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
         }
-        
-        /* Modern Cards */
         .card-modern {
             background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
             backdrop-filter: blur(10px);
@@ -85,8 +83,6 @@ def get_enhanced_styles(dark_mode=False):
             height: 3px;
             background: linear-gradient(90deg, #00d2ff, #3a7bd5, #00d2ff);
         }
-        
-        /* Metric Cards */
         .metric-card {
             background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
             border-radius: 16px;
@@ -113,10 +109,6 @@ def get_enhanced_styles(dark_mode=False):
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        .metric-trend-up { color: #00ff88; }
-        .metric-trend-down { color: #ff4444; }
-        
-        /* Badges */
         .badge {
             display: inline-block;
             padding: 0.25rem 0.75rem;
@@ -125,15 +117,15 @@ def get_enhanced_styles(dark_mode=False):
             font-weight: 600;
             margin: 0 0.25rem;
         }
-        .badge-urgent { background: #ff4444; color: white; }
         .badge-high { background: #ff6b6b; color: white; }
         .badge-medium { background: #ffb347; color: white; }
         .badge-low { background: #4ecdc4; color: white; }
         .badge-todo { background: #3498db; color: white; }
         .badge-progress { background: #f39c12; color: white; }
         .badge-done { background: #2ecc71; color: white; }
-        
-        /* Tags */
+        .badge-draft { background: #95a5a6; color: white; }
+        .badge-review { background: #3498db; color: white; }
+        .badge-published { background: #2ecc71; color: white; }
         .tag {
             display: inline-block;
             padding: 0.2rem 0.6rem;
@@ -144,8 +136,6 @@ def get_enhanced_styles(dark_mode=False):
             background: rgba(255,255,255,0.1);
             color: #e0e0e0;
         }
-        
-        /* Countdown */
         .countdown-urgent {
             background: rgba(255,68,68,0.2);
             color: #ff8888;
@@ -153,20 +143,6 @@ def get_enhanced_styles(dark_mode=False):
             border-radius: 20px;
             font-weight: bold;
         }
-        .countdown-warning {
-            background: rgba(255,180,71,0.2);
-            color: #ffb347;
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
-        }
-        .countdown-normal {
-            background: rgba(46,204,113,0.2);
-            color: #2ecc71;
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
-        }
-        
-        /* Progress Bar */
         .progress-bar {
             background: rgba(255,255,255,0.1);
             border-radius: 10px;
@@ -179,28 +155,9 @@ def get_enhanced_styles(dark_mode=False):
             border-radius: 10px;
             transition: width 0.3s ease;
         }
-        
-        /* Timeline */
-        .timeline-item {
-            border-left: 2px solid #00d2ff;
-            padding-left: 1rem;
-            margin: 1rem 0;
-            position: relative;
-        }
-        .timeline-dot {
-            position: absolute;
-            left: -0.5rem;
-            top: 0;
-            width: 0.8rem;
-            height: 0.8rem;
-            border-radius: 50%;
-            background: #00d2ff;
-        }
-        
         h1, h2, h3, h4, p, span, label, .stMarkdown {
             color: #e0e0e0;
         }
-        
         .stButton>button {
             background: linear-gradient(135deg, #00d2ff, #3a7bd5);
             color: white;
@@ -213,7 +170,6 @@ def get_enhanced_styles(dark_mode=False):
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,210,255,0.3);
         }
-        
         hr {
             border-color: rgba(255,255,255,0.1);
         }
@@ -225,7 +181,6 @@ def get_enhanced_styles(dark_mode=False):
         .stApp {
             background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
         }
-        
         .card-modern {
             background: white;
             border-radius: 20px;
@@ -250,7 +205,6 @@ def get_enhanced_styles(dark_mode=False):
             height: 3px;
             background: linear-gradient(90deg, #0A2647, #2C5F8A, #4A9FD8);
         }
-        
         .metric-card {
             background: white;
             border-radius: 16px;
@@ -276,9 +230,6 @@ def get_enhanced_styles(dark_mode=False):
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        .metric-trend-up { color: #10b981; }
-        .metric-trend-down { color: #ef4444; }
-        
         .badge {
             display: inline-block;
             padding: 0.25rem 0.75rem;
@@ -287,14 +238,15 @@ def get_enhanced_styles(dark_mode=False):
             font-weight: 600;
             margin: 0 0.25rem;
         }
-        .badge-urgent { background: #ef4444; color: white; }
         .badge-high { background: #f97316; color: white; }
         .badge-medium { background: #eab308; color: white; }
         .badge-low { background: #10b981; color: white; }
         .badge-todo { background: #3b82f6; color: white; }
         .badge-progress { background: #f59e0b; color: white; }
         .badge-done { background: #22c55e; color: white; }
-        
+        .badge-draft { background: #6b7280; color: white; }
+        .badge-review { background: #3b82f6; color: white; }
+        .badge-published { background: #22c55e; color: white; }
         .tag {
             display: inline-block;
             padding: 0.2rem 0.6rem;
@@ -305,7 +257,6 @@ def get_enhanced_styles(dark_mode=False):
             background: #f3f4f6;
             color: #374151;
         }
-        
         .countdown-urgent {
             background: #fee2e2;
             color: #dc2626;
@@ -313,19 +264,6 @@ def get_enhanced_styles(dark_mode=False):
             border-radius: 20px;
             font-weight: bold;
         }
-        .countdown-warning {
-            background: #fed7aa;
-            color: #ea580c;
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
-        }
-        .countdown-normal {
-            background: #d1fae5;
-            color: #059669;
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
-        }
-        
         .progress-bar {
             background: #e5e7eb;
             border-radius: 10px;
@@ -338,23 +276,6 @@ def get_enhanced_styles(dark_mode=False):
             border-radius: 10px;
             transition: width 0.3s ease;
         }
-        
-        .timeline-item {
-            border-left: 2px solid #0A2647;
-            padding-left: 1rem;
-            margin: 1rem 0;
-            position: relative;
-        }
-        .timeline-dot {
-            position: absolute;
-            left: -0.5rem;
-            top: 0;
-            width: 0.8rem;
-            height: 0.8rem;
-            border-radius: 50%;
-            background: #0A2647;
-        }
-        
         h1, h2, h3, h4, p, span, label {
             color: #1f2937;
         }
@@ -464,42 +385,26 @@ def export_to_excel(data, filename):
                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 def export_glossary_to_pdf(glossary_df):
-    """Exporta o glossário para PDF"""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
     styles = getSampleStyleSheet()
-    
-    # Estilo personalizado para o título
     title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=24, alignment=TA_CENTER, spaceAfter=30)
-    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=12, alignment=TA_CENTER, spaceAfter=20)
-    
     elements = []
-    
-    # Título
     elements.append(Paragraph("TaskSync - Glossário de Termos", title_style))
-    elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
+    elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
     elements.append(Spacer(1, 20))
     
-    # Agrupar por categoria
     categories = glossary_df['category'].unique() if 'category' in glossary_df.columns else ['todos']
-    
     for category in categories:
         elements.append(Paragraph(f"<b>{category.upper()}</b>", styles['Heading2']))
         elements.append(Spacer(1, 10))
-        
         category_terms = glossary_df[glossary_df['category'] == category] if 'category' in glossary_df.columns else glossary_df
-        
         for _, row in category_terms.iterrows():
-            term = row['term']
-            definition = row['definition']
-            example = row.get('example', '')
-            
-            elements.append(Paragraph(f"<b>{term}</b>", styles['Heading3']))
-            elements.append(Paragraph(f"<i>Definição:</i> {definition}", styles['Normal']))
-            if example and example != 'N/A':
-                elements.append(Paragraph(f"<i>Exemplo:</i> {example}", styles['Normal']))
+            elements.append(Paragraph(f"<b>{row['term']}</b>", styles['Heading3']))
+            elements.append(Paragraph(f"<i>Definição:</i> {row['definition']}", styles['Normal']))
+            if row.get('example') and row['example'] != 'N/A':
+                elements.append(Paragraph(f"<i>Exemplo:</i> {row['example']}", styles['Normal']))
             elements.append(Spacer(1, 10))
-        
         elements.append(PageBreak())
     
     doc.build(elements)
@@ -527,6 +432,155 @@ def get_whitepapers():
 
 def get_cases():
     return pd.read_sql_query("SELECT * FROM knowledge_base WHERE type='case_study' ORDER BY created_at DESC", conn)
+
+# ===== WHITEPAPERS FUNCTIONS =====
+def get_whitepaper_details(wp_id):
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, title, topic, description, status, progress, author_name, 
+               content, document_link, published_date, target_audience, tags, created_at
+        FROM whitepapers WHERE id = %s
+    """, (wp_id,))
+    result = cur.fetchone()
+    cur.close()
+    if result:
+        columns = ['id', 'title', 'topic', 'description', 'status', 'progress', 'author_name',
+                   'content', 'document_link', 'published_date', 'target_audience', 'tags', 'created_at']
+        return dict(zip(columns, result))
+    return None
+
+def update_whitepaper_details(wp_id, updates):
+    cur = conn.cursor()
+    set_clause = ", ".join([f"{key}=%s" for key in updates.keys()])
+    values = list(updates.values()) + [wp_id]
+    cur.execute(f"UPDATE whitepapers SET {set_clause} WHERE id=%s", values)
+    conn.commit()
+    cur.close()
+
+def delete_whitepaper(wp_id):
+    cur = conn.cursor()
+    cur.execute("DELETE FROM whitepapers WHERE id=%s", (wp_id,))
+    conn.commit()
+    cur.close()
+
+def get_whitepaper_comments(wp_id):
+    if f"wp_comments_{wp_id}" not in st.session_state:
+        st.session_state[f"wp_comments_{wp_id}"] = []
+    return st.session_state[f"wp_comments_{wp_id}"]
+
+def add_whitepaper_comment(wp_id, comment_text, user_name):
+    if comment_text.strip():
+        st.session_state[f"wp_comments_{wp_id}"].append({
+            "user": user_name,
+            "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "text": comment_text.strip()
+        })
+        return True
+    return False
+
+def show_whitepaper_modal(wp_id, wp_title):
+    wp = get_whitepaper_details(wp_id)
+    if not wp:
+        return
+    
+    st.markdown(f"## 📄 {wp['title']}")
+    status_colors = {"draft": "badge-draft", "review": "badge-review", "published": "badge-published"}
+    status_color = status_colors.get(wp['status'], "badge-draft")
+    
+    st.markdown(f"""
+    <div style="margin-bottom: 1rem;">
+        <span class="badge {status_color}">{wp['status'].upper()}</span>
+        <span class="badge badge-info">Progresso: {wp['progress']}%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width: {wp['progress']}%;"></div></div>
+    """, unsafe_allow_html=True)
+    
+    tab1, tab2, tab3 = st.tabs(["📝 Conteúdo", "✏️ Editar", "💬 Comentários"])
+    
+    with tab1:
+        st.markdown("### 📋 Informações Gerais")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown(f"**Tópico:** {wp['topic'] or 'N/A'}")
+            st.markdown(f"**Autor:** {wp['author_name'] or 'N/A'}")
+        with col2:
+            st.markdown(f"**Data de publicação:** {wp['published_date'] or 'Não publicado'}")
+            st.markdown(f"**Criado em:** {wp['created_at'].strftime('%d/%m/%Y') if wp['created_at'] else 'N/A'}")
+        
+        if wp['description']:
+            st.markdown("### 📌 Descrição")
+            st.write(wp['description'])
+        if wp['content']:
+            st.markdown("### 📄 Conteúdo")
+            st.markdown(f'<div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 8px;">{wp["content"]}</div>', unsafe_allow_html=True)
+        if wp['target_audience']:
+            st.markdown("### 👥 Público-alvo")
+            st.write(wp['target_audience'])
+        if wp['tags']:
+            st.markdown("### 🏷️ Tags")
+            tags_html = ''.join([render_tag(tag.strip()) for tag in wp['tags'].split(',') if tag.strip()])
+            st.markdown(tags_html, unsafe_allow_html=True)
+        if wp['document_link']:
+            st.markdown(f"### 🔗 Link para documento")
+            st.markdown(f'<a href="{wp["document_link"]}" target="_blank">{wp["document_link"]}</a>', unsafe_allow_html=True)
+    
+    with tab2:
+        st.markdown("### ✏️ Editar Whitepaper")
+        col1, col2 = st.columns(2)
+        with col1:
+            new_title = st.text_input("Título", value=wp['title'], key=f"edit_wp_title_{wp_id}")
+            new_topic = st.text_input("Tópico", value=wp['topic'] or "", key=f"edit_wp_topic_{wp_id}")
+            new_author = st.text_input("Autor", value=wp['author_name'] or "", key=f"edit_wp_author_{wp_id}")
+            new_status = st.selectbox("Status", ["draft", "review", "published"],
+                                     index=["draft", "review", "published"].index(wp['status']) if wp['status'] in ["draft", "review", "published"] else 0,
+                                     key=f"edit_wp_status_{wp_id}")
+        with col2:
+            new_progress = st.slider("Progresso (%)", 0, 100, wp['progress'] or 0, key=f"edit_wp_progress_{wp_id}")
+            new_published_date = st.date_input("Data de publicação", 
+                                              value=wp['published_date'] if wp['published_date'] else date.today(),
+                                              key=f"edit_wp_date_{wp_id}")
+            new_target_audience = st.text_input("Público-alvo", value=wp['target_audience'] or "", key=f"edit_wp_audience_{wp_id}")
+            new_tags = st.text_input("Tags", value=wp['tags'] or "", key=f"edit_wp_tags_{wp_id}")
+        
+        new_description = st.text_area("Descrição", value=wp['description'] or "", height=100, key=f"edit_wp_desc_{wp_id}")
+        new_content = st.text_area("Conteúdo", value=wp['content'] or "", height=200, key=f"edit_wp_content_{wp_id}")
+        new_document_link = st.text_input("Link do documento", value=wp['document_link'] or "", key=f"edit_wp_link_{wp_id}")
+        
+        if st.button("💾 Salvar alterações", key=f"save_wp_{wp_id}", use_container_width=True):
+            updates = {
+                "title": new_title, "topic": new_topic, "description": new_description,
+                "status": new_status, "progress": new_progress, "author_name": new_author,
+                "content": new_content, "document_link": new_document_link,
+                "published_date": new_published_date, "target_audience": new_target_audience,
+                "tags": new_tags
+            }
+            update_whitepaper_details(wp_id, updates)
+            add_notification(f"✅ Whitepaper '{new_title}' atualizado!", "success")
+            st.rerun()
+    
+    with tab3:
+        st.markdown("### 💬 Comentários")
+        comments = get_whitepaper_comments(wp_id)
+        if comments:
+            for idx, comment in enumerate(reversed(comments)):
+                st.markdown(f"**{comment['user']}** - *{comment['date']}*")
+                st.markdown(comment['text'])
+                if st.button("🗑️", key=f"delete_wp_comment_{wp_id}_{idx}"):
+                    del st.session_state[f"wp_comments_{wp_id}"][len(comments) - 1 - idx]
+                    st.rerun()
+                st.markdown("---")
+        else:
+            st.info("Nenhum comentário ainda.")
+        
+        new_comment = st.text_area("Escreva seu comentário...", height=100, key=f"new_wp_comment_{wp_id}")
+        if st.button("📤 Enviar", key=f"submit_wp_comment_{wp_id}"):
+            if add_whitepaper_comment(wp_id, new_comment, st.session_state.user_name):
+                add_notification("✅ Comentário adicionado!", "success")
+                st.rerun()
+    
+    if st.button("🔙 Fechar", key=f"close_wp_modal_{wp_id}"):
+        st.session_state[f"show_wp_details_{wp_id}"] = False
+        st.rerun()
 
 # ===== COMMENTS SYSTEM =====
 def init_comments(task_id):
@@ -580,11 +634,8 @@ def show_task_modal(task_id, task_title):
     task = get_task_details(task_id)
     if not task:
         return
-    
     init_comments(task_id)
-    
     st.markdown(f"## 📋 {task['title']}")
-    
     tab1, tab2, tab3 = st.tabs(["📝 Detalhes", "💬 Comentários", "📊 Progresso"])
     
     with tab1:
@@ -604,15 +655,15 @@ def show_task_modal(task_id, task_title):
             new_due_date = st.date_input("Data limite", value=task['due_date'] if task['due_date'] else date.today(), key=f"edit_due_{task_id}")
             new_tags = st.text_input("Tags", value=task['tags'] or "", key=f"edit_tags_{task_id}")
         
-        new_notes = st.text_area("Notas e Observações", value=task['notes'] or "", height=100, key=f"edit_notes_{task_id}")
+        new_notes = st.text_area("Notas", value=task['notes'] or "", height=100, key=f"edit_notes_{task_id}")
         new_document_link = st.text_input("Link do documento", value=task['document_link'] or "", key=f"edit_link_{task_id}")
         
-        if st.button("💾 Salvar alterações", key=f"save_task_{task_id}"):
+        if st.button("💾 Salvar", key=f"save_task_{task_id}"):
             updates = {"title": new_title, "description": new_description, "category": new_category,
                       "priority": new_priority, "owner_name": new_owner, "due_date": new_due_date,
                       "tags": new_tags, "notes": new_notes, "document_link": new_document_link}
             update_task_details(task_id, updates)
-            add_notification(f"✅ Tarefa '{new_title}' atualizada!", "success")
+            add_notification(f"✅ Tarefa atualizada!", "success")
             st.rerun()
     
     with tab2:
@@ -621,7 +672,7 @@ def show_task_modal(task_id, task_title):
         if comments:
             for idx, comment in enumerate(reversed(comments)):
                 st.markdown(f"**{comment['user']}** - *{comment['date']}*")
-                st.markdown(f"{comment['text']}")
+                st.markdown(comment['text'])
                 if st.button("🗑️", key=f"delete_comment_{task_id}_{idx}"):
                     delete_comment(task_id, len(comments) - 1 - idx)
                     st.rerun()
@@ -648,7 +699,7 @@ def show_task_modal(task_id, task_title):
                 if new_status == "Done" and not task['completed_date']:
                     updates["completed_date"] = date.today()
                 update_task_details(task_id, updates)
-                add_notification(f"✅ Status atualizado para '{new_status}'!", "success")
+                add_notification(f"✅ Status atualizado!", "success")
                 st.rerun()
     
     if st.button("🔙 Fechar", key=f"close_modal_{task_id}"):
@@ -658,7 +709,7 @@ def show_task_modal(task_id, task_title):
 # ===== VISUALIZATION FUNCTIONS =====
 def show_progress_charts(tasks_df):
     if tasks_df.empty:
-        st.info("Nenhuma tarefa para exibir nos gráficos")
+        st.info("Nenhuma tarefa para exibir")
         return
     status_counts = tasks_df['status'].value_counts()
     fig_pie = px.pie(values=status_counts.values, names=status_counts.index, title="Distribuição por Status")
@@ -734,7 +785,12 @@ def show_calendar_view(events_df):
 
 # ===== SIDEBAR =====
 with st.sidebar:
-    st.markdown("## 🎯 TaskSync")
+    st.markdown("""
+<div style="display:flex; align-items:center; gap:12px;">
+    <img src="logo.png" width="40">
+    <h2 style="margin:0;">TaskSync</h2>
+</div>
+""", unsafe_allow_html=True)
     st.markdown("Operations Strategy")
     st.markdown("---")
     
@@ -770,7 +826,6 @@ if menu == "📊 Dashboard":
     events = get_events()
     companies = get_companies()
     advisors = get_advisors()
-    whitepapers = get_whitepapers()
     metrics = get_realtime_metrics()
     
     col1, col2, col3, col4 = st.columns(4)
@@ -806,8 +861,7 @@ elif menu == "📋 Kanban":
                 due_date = st.date_input("Data limite", value=None)
                 tags = st.text_input("Tags")
             description = st.text_area("Descrição")
-            submitted = st.form_submit_button("Salvar")
-            if submitted and title:
+            if st.form_submit_button("Salvar") and title:
                 cur = conn.cursor()
                 cur.execute("""INSERT INTO tasks (title, description, category, priority, status, owner_name, due_date, tags)
                                VALUES (%s, %s, %s, %s, 'To Do', %s, %s, %s)""",
@@ -951,50 +1005,154 @@ elif menu == "📚 Knowledge Base":
     
     tab1, tab2, tab3 = st.tabs(["📄 Whitepapers", "📖 Glossário", "📊 Case Studies"])
     
+    # TAB 1: WHITEPAPERS
     with tab1:
-        st.subheader("Whitepapers")
-        with st.expander("➕ Novo Whitepaper", expanded=False):
-            with st.form("new_wp"):
-                title = st.text_input("Título *")
-                topic = st.text_input("Tópico")
-                author = st.text_input("Autor")
-                content = st.text_area("Conteúdo")
-                if st.form_submit_button("Salvar") and title:
-                    cur = conn.cursor()
-                    cur.execute("INSERT INTO whitepapers (title, topic, author_name, content) VALUES (%s, %s, %s, %s)",
-                               (title, topic, author, content))
-                    conn.commit()
-                    st.rerun()
+        st.subheader("Whitepapers e Documentos Técnicos")
+        
+        col_search, col_filter, col_stats = st.columns([2, 1, 1])
+        with col_search:
+            search_wp = st.text_input("🔍 Buscar whitepapers", placeholder="Título, tópico, autor...", key="search_wp")
+        with col_filter:
+            status_filter = st.selectbox("Status", ["Todos", "draft", "review", "published"], key="filter_wp_status")
+        with col_stats:
+            wps_all = get_whitepapers()
+            st.metric("Total", len(wps_all), help="Total de whitepapers cadastrados")
+        
+        col_add, col_export = st.columns(2)
+        with col_add:
+            if st.button("➕ Novo Whitepaper", use_container_width=True):
+                st.session_state.show_new_wp_form = True
+        with col_export:
+            if st.button("📥 Exportar Lista", use_container_width=True):
+                wps_export = get_whitepapers()
+                if not wps_export.empty:
+                    export_to_excel(wps_export, "whitepapers_list")
+        
+        if st.session_state.get("show_new_wp_form", False):
+            with st.expander("📝 Criar Novo Whitepaper", expanded=True):
+                with st.form("new_wp_form"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        title = st.text_input("Título *")
+                        topic = st.text_input("Tópico/Área")
+                        author = st.text_input("Autor(es)")
+                        status = st.selectbox("Status", ["draft", "review", "published"])
+                    with col2:
+                        progress = st.slider("Progresso (%)", 0, 100, 0)
+                        target_audience = st.text_input("Público-alvo")
+                        tags = st.text_input("Tags")
+                    description = st.text_area("Descrição resumida", height=100)
+                    content = st.text_area("Conteúdo completo", height=200)
+                    document_link = st.text_input("Link para documento")
+                    
+                    if st.form_submit_button("✅ Criar Whitepaper") and title:
+                        cur = conn.cursor()
+                        cur.execute("""
+                            INSERT INTO whitepapers (title, topic, description, status, progress, author_name, 
+                                                   content, document_link, target_audience, tags)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (title, topic, description, status, progress, author, content, document_link, target_audience, tags))
+                        conn.commit()
+                        add_notification(f"✅ Whitepaper '{title}' criado!", "success")
+                        st.session_state.show_new_wp_form = False
+                        st.rerun()
         
         wps = get_whitepapers()
-        for _, row in wps.iterrows():
-            st.markdown(f"""
-            <div class="card-modern">
-                <h4>{row['title']}</h4>
-                <p><strong>Tópico:</strong> {row['topic']} | <strong>Autor:</strong> {row['author_name']}</p>
-                <p>{row['content'][:200]}...</p>
-            </div>
-            """, unsafe_allow_html=True)
+        if not wps.empty:
+            if search_wp:
+                wps = wps[
+                    wps['title'].str.contains(search_wp, case=False, na=False) |
+                    wps['topic'].str.contains(search_wp, case=False, na=False) |
+                    wps['author_name'].str.contains(search_wp, case=False, na=False)
+                ]
+            if status_filter != "Todos":
+                wps = wps[wps['status'] == status_filter]
+        
+        if wps.empty:
+            st.info("📭 Nenhum whitepaper encontrado.")
+        else:
+            for _, row in wps.iterrows():
+                status_colors = {"draft": "🟡 Rascunho", "review": "🔵 Em revisão", "published": "🟢 Publicado"}
+                status_display = status_colors.get(row['status'], row['status'])
+                progress_color = "#22c55e" if row['progress'] >= 80 else "#f59e0b" if row['progress'] >= 50 else "#ef4444"
+                
+                st.markdown(f"""
+                <div class="card-modern">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <h4>{row['title']}</h4>
+                            <div style="margin-bottom: 0.5rem;">
+                                <span class="badge badge-info">{row['topic'] or 'Sem tópico'}</span>
+                                <span class="badge badge-info">📝 {row['author_name'] or 'Autor não informado'}</span>
+                            </div>
+                            <p>{row['description'][:150]}...</p>
+                            <div style="margin-top: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span>Progresso:</span>
+                                    <div style="flex: 1; background: #e5e7eb; border-radius: 10px; height: 6px;">
+                                        <div style="width: {row['progress']}%; background: {progress_color}; height: 100%; border-radius: 10px;"></div>
+                                    </div>
+                                    <span>{row['progress']}%</span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 0.5rem;">
+                                <span class="badge badge-info">{status_display}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    if st.button("📖 Ler", key=f"read_wp_{row['id']}"):
+                        st.session_state[f"show_wp_details_{row['id']}"] = True
+                        st.rerun()
+                with col2:
+                    if st.button("✏️ Editar", key=f"edit_wp_{row['id']}"):
+                        st.session_state[f"editing_wp_{row['id']}"] = True
+                with col3:
+                    if st.button("📥 Exportar", key=f"export_wp_{row['id']}"):
+                        wp_data = pd.DataFrame([{"Título": row['title'], "Tópico": row['topic'], "Autor": row['author_name'], "Status": row['status']}])
+                        export_to_excel(wp_data, f"whitepaper_{row['id']}")
+                with col4:
+                    if st.button("🗑️ Excluir", key=f"delete_wp_{row['id']}"):
+                        delete_whitepaper(row['id'])
+                        add_notification(f"✅ Whitepaper excluído!", "success")
+                        st.rerun()
+                
+                if st.session_state.get(f"editing_wp_{row['id']}", False):
+                    with st.form(f"edit_wp_form_{row['id']}"):
+                        new_title = st.text_input("Título", value=row['title'])
+                        new_topic = st.text_input("Tópico", value=row['topic'] or "")
+                        new_author = st.text_input("Autor", value=row['author_name'] or "")
+                        new_status = st.selectbox("Status", ["draft", "review", "published"], index=["draft", "review", "published"].index(row['status']))
+                        new_progress = st.slider("Progresso", 0, 100, row['progress'] or 0)
+                        new_desc = st.text_area("Descrição", value=row['description'] or "")
+                        if st.form_submit_button("💾 Salvar"):
+                            updates = {"title": new_title, "topic": new_topic, "author_name": new_author,
+                                      "status": new_status, "progress": new_progress, "description": new_desc}
+                            update_whitepaper_details(row['id'], updates)
+                            st.session_state[f"editing_wp_{row['id']}"] = False
+                            st.rerun()
+                
+                if st.session_state.get(f"show_wp_details_{row['id']}", False):
+                    with st.expander(f"📖 {row['title']} - Detalhes", expanded=True):
+                        show_whitepaper_modal(row['id'], row['title'])
+                
+                st.markdown("---")
     
+    # TAB 2: GLOSSÁRIO
     with tab2:
         st.subheader("Glossário")
         
-        # Botão de exportar PDF
         col1, col2 = st.columns([3, 1])
         with col2:
             if st.button("📄 Exportar PDF", use_container_width=True):
                 glossary_df = get_glossary()
                 if not glossary_df.empty:
                     pdf_buffer = export_glossary_to_pdf(glossary_df)
-                    st.download_button(
-                        label="📥 Baixar PDF do Glossário",
-                        data=pdf_buffer,
-                        file_name=f"glossario_tasksync_{datetime.now().strftime('%Y%m%d')}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                else:
-                    st.warning("Nenhum termo no glossário para exportar.")
+                    st.download_button(label="📥 Baixar PDF", data=pdf_buffer, file_name=f"glossario_{datetime.now().strftime('%Y%m%d')}.pdf", mime="application/pdf")
         
         with col1:
             search_term = st.text_input("🔍 Pesquisar termo", key="search_glossary")
@@ -1024,33 +1182,8 @@ elif menu == "📚 Knowledge Base":
                 <p><strong>Categoria:</strong> {row['category']} | <strong>Exemplo:</strong> {row['example'] or 'N/A'}</p>
             </div>
             """, unsafe_allow_html=True)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("✏️ Editar", key=f"edit_term_{row['id']}"):
-                    st.session_state[f"editing_term_{row['id']}"] = True
-            with col2:
-                if st.button("🗑️ Excluir", key=f"delete_term_{row['id']}"):
-                    cur = conn.cursor()
-                    cur.execute("DELETE FROM glossary WHERE id=%s", (row['id'],))
-                    conn.commit()
-                    st.rerun()
-            
-            if st.session_state.get(f"editing_term_{row['id']}", False):
-                with st.form(f"edit_term_form_{row['id']}"):
-                    new_term = st.text_input("Termo", value=row['term'])
-                    new_def = st.text_area("Definição", value=row['definition'])
-                    new_cat = st.selectbox("Categoria", ["technical", "business", "acronym"],
-                                          index=["technical", "business", "acronym"].index(row['category']))
-                    new_example = st.text_input("Exemplo", value=row['example'] or "")
-                    if st.form_submit_button("💾 Salvar"):
-                        cur = conn.cursor()
-                        cur.execute("UPDATE glossary SET term=%s, definition=%s, category=%s, example=%s WHERE id=%s",
-                                   (new_term, new_def, new_cat, new_example, row['id']))
-                        conn.commit()
-                        st.session_state[f"editing_term_{row['id']}"] = False
-                        st.rerun()
     
+    # TAB 3: CASE STUDIES
     with tab3:
         st.subheader("Case Studies")
         with st.expander("➕ Novo Case Study", expanded=False):
