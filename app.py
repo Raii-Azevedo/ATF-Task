@@ -25,7 +25,6 @@ st.set_page_config(
 def init_session_state():
     """Initialize all session state variables"""
     defaults = {
-        "dark_mode": True,
         "notifications": [],
         "saved_filters": {},
         "comments": {},
@@ -49,240 +48,185 @@ def init_database():
 init_database()
 conn = get_connection()
 
-# ===== ENHANCED STYLES =====
-def get_enhanced_styles(dark_mode=False):
-    """Get enhanced CSS styles with glassmorphism and modern effects"""
-    if dark_mode:
-        return """
-        <style>
-        .stApp {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        }
-        .card-modern {
-            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            border: 1px solid rgba(255,255,255,0.18);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        .card-modern:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 35px rgba(0,0,0,0.3);
-            border-color: rgba(255,255,255,0.3);
-        }
-        .card-modern::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #00d2ff, #3a7bd5, #00d2ff);
-        }
-        .metric-card {
-            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-            border-radius: 16px;
-            padding: 1.5rem;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.1);
-            transition: all 0.3s ease;
-        }
-        .metric-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-        .metric-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
-        }
-        .metric-label {
-            color: #a0a0a0;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin: 0 0.25rem;
-        }
-        .badge-high { background: #ff6b6b; color: white; }
-        .badge-medium { background: #ffb347; color: white; }
-        .badge-low { background: #4ecdc4; color: white; }
-        .badge-todo { background: #3498db; color: white; }
-        .badge-progress { background: #f39c12; color: white; }
-        .badge-done { background: #2ecc71; color: white; }
-        .badge-draft { background: #95a5a6; color: white; }
-        .badge-review { background: #3498db; color: white; }
-        .badge-published { background: #2ecc71; color: white; }
-        .tag {
-            display: inline-block;
-            padding: 0.2rem 0.6rem;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            margin-right: 0.5rem;
-            background: rgba(255,255,255,0.1);
-            color: #e0e0e0;
-        }
-        .countdown-urgent {
-            background: rgba(255,68,68,0.2);
-            color: #ff8888;
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
-            font-weight: bold;
-        }
-        .progress-bar {
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            height: 8px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
-            height: 100%;
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-        h1, h2, h3, h4, p, span, label, .stMarkdown {
-            color: #e0e0e0;
-        }
-        .stButton>button {
-            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
-            transition: all 0.3s ease;
-        }
-        .stButton>button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,210,255,0.3);
-        }
-        hr {
-            border-color: rgba(255,255,255,0.1);
-        }
-        </style>
-        """
-    else:
-        return """
-        <style>
-        .stApp {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-        }
-        .card-modern {
-            background: white;
-            border-radius: 20px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-            border: 1px solid #e5e7eb;
-            position: relative;
-            overflow: hidden;
-        }
-        .card-modern:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 25px rgba(0,0,0,0.12);
-        }
-        .card-modern::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #0A2647, #2C5F8A, #4A9FD8);
-        }
-        .metric-card {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            border: 1px solid #e5e7eb;
-        }
-        .metric-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        }
-        .metric-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #0A2647;
-            margin-bottom: 0.5rem;
-        }
-        .metric-label {
-            color: #6b7280;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin: 0 0.25rem;
-        }
-        .badge-high { background: #f97316; color: white; }
-        .badge-medium { background: #eab308; color: white; }
-        .badge-low { background: #10b981; color: white; }
-        .badge-todo { background: #3b82f6; color: white; }
-        .badge-progress { background: #f59e0b; color: white; }
-        .badge-done { background: #22c55e; color: white; }
-        .badge-draft { background: #6b7280; color: white; }
-        .badge-review { background: #3b82f6; color: white; }
-        .badge-published { background: #22c55e; color: white; }
-        .tag {
-            display: inline-block;
-            padding: 0.2rem 0.6rem;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            margin-right: 0.5rem;
-            background: #f3f4f6;
-            color: #374151;
-        }
-        .countdown-urgent {
-            background: #fee2e2;
-            color: #dc2626;
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
-            font-weight: bold;
-        }
-        .progress-bar {
-            background: #e5e7eb;
-            border-radius: 10px;
-            height: 8px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            background: linear-gradient(90deg, #0A2647, #2C5F8A);
-            height: 100%;
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-        h1, h2, h3, h4, p, span, label {
-            color: #1f2937;
-        }
-        </style>
-        """
+# ===== DARK MODE ONLY STYLES =====
+st.markdown("""
+<style>
+/* Dark Mode Base */
+.stApp {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
 
-st.markdown(get_enhanced_styles(st.session_state.dark_mode), unsafe_allow_html=True)
+/* Modern Cards */
+.card-modern {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border: 1px solid rgba(255,255,255,0.18);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+.card-modern:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 35px rgba(0,0,0,0.3);
+    border-color: rgba(255,255,255,0.3);
+}
+.card-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #00d2ff, #3a7bd5, #00d2ff);
+}
+
+/* Metric Cards */
+.metric-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s ease;
+}
+.metric-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+}
+.metric-label {
+    color: #a0a0a0;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin: 0 0.25rem;
+}
+.badge-high { background: #ff6b6b; color: white; }
+.badge-medium { background: #ffb347; color: white; }
+.badge-low { background: #4ecdc4; color: white; }
+.badge-todo { background: #3498db; color: white; }
+.badge-progress { background: #f39c12; color: white; }
+.badge-done { background: #2ecc71; color: white; }
+.badge-draft { background: #95a5a6; color: white; }
+.badge-review { background: #3498db; color: white; }
+.badge-published { background: #2ecc71; color: white; }
+.badge-info { background: #3498db; color: white; }
+
+/* Tags */
+.tag {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+    background: rgba(255,255,255,0.1);
+    color: #e0e0e0;
+}
+
+/* Countdown */
+.countdown-urgent {
+    background: rgba(255,68,68,0.2);
+    color: #ff8888;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-weight: bold;
+}
+.countdown-warning {
+    background: rgba(255,180,71,0.2);
+    color: #ffb347;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+}
+.countdown-normal {
+    background: rgba(46,204,113,0.2);
+    color: #2ecc71;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+}
+
+/* Progress Bar */
+.progress-bar {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+}
+.progress-fill {
+    background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+/* Timeline */
+.timeline-item {
+    border-left: 2px solid #00d2ff;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    position: relative;
+}
+.timeline-dot {
+    position: absolute;
+    left: -0.5rem;
+    top: 0;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: #00d2ff;
+}
+
+/* Text Colors */
+h1, h2, h3, h4, p, span, label, .stMarkdown {
+    color: #e0e0e0;
+}
+
+/* Buttons */
+.stButton>button {
+    background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+}
+.stButton>button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,210,255,0.3);
+}
+
+hr {
+    border-color: rgba(255,255,255,0.1);
+}
+
+/* Inputs */
+.stTextInput>div>div>input, .stTextArea textarea, .stSelectbox>div>div {
+    background-color: rgba(255,255,255,0.08) !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 8px !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ===== NOTIFICATION SYSTEM =====
 def add_notification(message, type="info"):
@@ -437,14 +381,14 @@ def get_cases():
 def get_whitepaper_details(wp_id):
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, title, topic, description, status, progress, author_name, 
+        SELECT id, title, topic, status, progress, author_name, 
                content, document_link, published_date, target_audience, tags, created_at
         FROM whitepapers WHERE id = %s
     """, (wp_id,))
     result = cur.fetchone()
     cur.close()
     if result:
-        columns = ['id', 'title', 'topic', 'description', 'status', 'progress', 'author_name',
+        columns = ['id', 'title', 'topic', 'status', 'progress', 'author_name',
                    'content', 'document_link', 'published_date', 'target_audience', 'tags', 'created_at']
         return dict(zip(columns, result))
     return None
@@ -507,12 +451,9 @@ def show_whitepaper_modal(wp_id, wp_title):
             st.markdown(f"**Data de publicação:** {wp['published_date'] or 'Não publicado'}")
             st.markdown(f"**Criado em:** {wp['created_at'].strftime('%d/%m/%Y') if wp['created_at'] else 'N/A'}")
         
-        if wp['description']:
-            st.markdown("### 📌 Descrição")
-            st.write(wp['description'])
         if wp['content']:
             st.markdown("### 📄 Conteúdo")
-            st.markdown(f'<div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 8px;">{wp["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">{wp["content"]}</div>', unsafe_allow_html=True)
         if wp['target_audience']:
             st.markdown("### 👥 Público-alvo")
             st.write(wp['target_audience'])
@@ -542,13 +483,12 @@ def show_whitepaper_modal(wp_id, wp_title):
             new_target_audience = st.text_input("Público-alvo", value=wp['target_audience'] or "", key=f"edit_wp_audience_{wp_id}")
             new_tags = st.text_input("Tags", value=wp['tags'] or "", key=f"edit_wp_tags_{wp_id}")
         
-        new_description = st.text_area("Descrição", value=wp['description'] or "", height=100, key=f"edit_wp_desc_{wp_id}")
         new_content = st.text_area("Conteúdo", value=wp['content'] or "", height=200, key=f"edit_wp_content_{wp_id}")
         new_document_link = st.text_input("Link do documento", value=wp['document_link'] or "", key=f"edit_wp_link_{wp_id}")
         
         if st.button("💾 Salvar alterações", key=f"save_wp_{wp_id}", use_container_width=True):
             updates = {
-                "title": new_title, "topic": new_topic, "description": new_description,
+                "title": new_title, "topic": new_topic,
                 "status": new_status, "progress": new_progress, "author_name": new_author,
                 "content": new_content, "document_link": new_document_link,
                 "published_date": new_published_date, "target_audience": new_target_audience,
@@ -713,11 +653,11 @@ def show_progress_charts(tasks_df):
         return
     status_counts = tasks_df['status'].value_counts()
     fig_pie = px.pie(values=status_counts.values, names=status_counts.index, title="Distribuição por Status")
-    fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+    fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='white')
     if 'category' in tasks_df.columns:
         category_counts = tasks_df['category'].value_counts()
         fig_bar = px.bar(x=category_counts.index, y=category_counts.values, title="Iniciativas por Categoria")
-        fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+        fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='white')
         col1, col2 = st.columns(2)
         with col1:
             st.plotly_chart(fig_pie, use_container_width=True)
@@ -733,7 +673,7 @@ def show_timeline(tasks_df):
     timeline_data['start'] = pd.to_datetime(timeline_data['created_at'] if 'created_at' in timeline_data.columns else datetime.now())
     timeline_data['end'] = pd.to_datetime(timeline_data['due_date'])
     fig = px.timeline(timeline_data, x_start="start", x_end="end", y="title", color="priority")
-    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='white')
     st.plotly_chart(fig, use_container_width=True)
 
 def show_upcoming_deadlines():
@@ -779,7 +719,7 @@ def show_calendar_view(events_df):
                 elif day in event_days:
                     st.markdown(f"<div style='background: #ffb347; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold;'>{day}</div>", unsafe_allow_html=True)
                 elif day == today.day:
-                    st.markdown(f"<div style='background: #0A2647; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold;'>{day}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background: #00d2ff; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold;'>{day}</div>", unsafe_allow_html=True)
                 else:
                     st.write(day)
 
@@ -787,23 +727,13 @@ def show_calendar_view(events_df):
 with st.sidebar:
     st.markdown("""
 <div style="display:flex; align-items:center; gap:12px;">
-    <img src="logo.png" width="40">
+    <img src="https://github.com/Raii-Azevedo/ATF-Task/blob/main/logo.png" width="40">
     <h2 style="margin:0;">TaskSync</h2>
 </div>
 """, unsafe_allow_html=True)
     st.markdown("Operations Strategy")
     st.markdown("---")
     
-    if st.toggle("🌙 Modo Escuro", value=st.session_state.dark_mode):
-        if not st.session_state.dark_mode:
-            st.session_state.dark_mode = True
-            st.rerun()
-    else:
-        if st.session_state.dark_mode:
-            st.session_state.dark_mode = False
-            st.rerun()
-    
-    st.markdown("---")
     menu = st.radio("Navegação", ["📊 Dashboard", "📋 Kanban", "📅 Eventos", "📚 Knowledge Base", "🏢 Empresas Target", "👥 Senior Advisors"])
     st.markdown("---")
     st.caption("TaskSync v3.0 | Raíssa Azevedo - 2026")
@@ -886,7 +816,7 @@ elif menu == "📋 Kanban":
                     <div>{get_priority_badge(row['priority'])} {get_status_badge(row['status'])}</div>
                     <p><strong>Responsável:</strong> {row['owner_name'] or 'N/A'}</p>
                     <p><strong>Data:</strong> {row['due_date'] or 'N/A'} {format_countdown(days_until(row['due_date']))}</p>
-                    <p><small>{row['description'][:100]}...</small></p>
+                    <p><small>{row['description'][:100] if row['description'] else 'Sem descrição'}...</small></p>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -1041,17 +971,16 @@ elif menu == "📚 Knowledge Base":
                         progress = st.slider("Progresso (%)", 0, 100, 0)
                         target_audience = st.text_input("Público-alvo")
                         tags = st.text_input("Tags")
-                    description = st.text_area("Descrição resumida", height=100)
-                    content = st.text_area("Conteúdo completo", height=200)
+                    content = st.text_area("Conteúdo", height=200)
                     document_link = st.text_input("Link para documento")
                     
                     if st.form_submit_button("✅ Criar Whitepaper") and title:
                         cur = conn.cursor()
                         cur.execute("""
-                            INSERT INTO whitepapers (title, topic, description, status, progress, author_name, 
+                            INSERT INTO whitepapers (title, topic, status, progress, author_name, 
                                                    content, document_link, target_audience, tags)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (title, topic, description, status, progress, author, content, document_link, target_audience, tags))
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (title, topic, status, progress, author, content, document_link, target_audience, tags))
                         conn.commit()
                         add_notification(f"✅ Whitepaper '{title}' criado!", "success")
                         st.session_state.show_new_wp_form = False
@@ -1085,11 +1014,10 @@ elif menu == "📚 Knowledge Base":
                                 <span class="badge badge-info">{row['topic'] or 'Sem tópico'}</span>
                                 <span class="badge badge-info">📝 {row['author_name'] or 'Autor não informado'}</span>
                             </div>
-                            <p>{row['description'][:150]}...</p>
                             <div style="margin-top: 0.5rem;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <span>Progresso:</span>
-                                    <div style="flex: 1; background: #e5e7eb; border-radius: 10px; height: 6px;">
+                                    <div style="flex: 1; background: rgba(255,255,255,0.1); border-radius: 10px; height: 6px;">
                                         <div style="width: {row['progress']}%; background: {progress_color}; height: 100%; border-radius: 10px;"></div>
                                     </div>
                                     <span>{row['progress']}%</span>
@@ -1128,10 +1056,9 @@ elif menu == "📚 Knowledge Base":
                         new_author = st.text_input("Autor", value=row['author_name'] or "")
                         new_status = st.selectbox("Status", ["draft", "review", "published"], index=["draft", "review", "published"].index(row['status']))
                         new_progress = st.slider("Progresso", 0, 100, row['progress'] or 0)
-                        new_desc = st.text_area("Descrição", value=row['description'] or "")
                         if st.form_submit_button("💾 Salvar"):
                             updates = {"title": new_title, "topic": new_topic, "author_name": new_author,
-                                      "status": new_status, "progress": new_progress, "description": new_desc}
+                                      "status": new_status, "progress": new_progress}
                             update_whitepaper_details(row['id'], updates)
                             st.session_state[f"editing_wp_{row['id']}"] = False
                             st.rerun()
